@@ -1,9 +1,14 @@
 export type TripCategory = "Sahyadri" | "Himalayas" | "Nepal";
 
 export type TripData = {
+  upcoming?: boolean;
   id: string;
   slug: string;
   title: string;
+  departureDate?: string;
+  departureLabel?: string;
+  tripType?: "Fixed Departure" | "Custom Trip" | "Corporate";
+  highlight?: string;
   subtitle: string;
   summary: string;
   cta: string;
@@ -119,11 +124,14 @@ export const defaultTrips: TripData[] = [
     id: "harishchandragad",
     slug: "harishchandragad",
     title: "Harishchandragad Trek",
+    departureLabel: "Upcoming Departures",
+tripType: "Fixed Departure",
+highlight: "Konkan Kada, ancient caves and dramatic Sahyadri landscapes",
     subtitle: "Fort walls, ridges, and a starry Sahyadri night.",
     summary:
       "A classic Sahyadri trek blending rock-cut architecture, forest trails, and a memorable overnight camp.",
     cta: "Book this trek",
-    price: "From ₹4,899 / person",
+    price: "From ₹1,500 / person",
     duration: "2 Days",
     seats: "8 seats remaining",
     difficulty: "Moderate",
@@ -147,11 +155,15 @@ export const defaultTrips: TripData[] = [
     id: "kusur-plateau",
     slug: "kusur-plateau",
     title: "Kusur Plateau Trek",
+    departureDate: "2026-08-23",
+departureLabel: "23 August 2026",
+tripType: "Fixed Departure",
+highlight: "Sunrise views across the Sahyadri valleys",
     subtitle: "Sunrise views. Wide meadows. A quick escape.",
     summary:
       "An easy-to-moderate mountain getaway with scenic viewpoints, smooth trails, and an unforgettable sunrise finish.",
     cta: "Reserve your slot",
-    price: "From ₹2,499 / person",
+    price: "From ₹1,500 / person",
     duration: "1 Day",
     seats: "12 seats remaining",
     difficulty: "Easy",

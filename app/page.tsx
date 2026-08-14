@@ -6,7 +6,8 @@ import gsap from "gsap";
 import { defaultTrips, tripCategories, type TripData } from "./data/trips";
 
 export default function Home() {
-  const [featuredTrip, setFeaturedTrip] = useState<TripData>(defaultTrips[0]);
+  const [trips, setTrips] = useState<TripData[]>(defaultTrips);
+const [featuredTrip, setFeaturedTrip] = useState<TripData>(defaultTrips[0]);
 
   useEffect(() => {
     const loadFeatured = async () => {
@@ -16,9 +17,18 @@ export default function Home() {
           setFeaturedTrip(defaultTrips.find((t) => t.featured) ?? defaultTrips[0]);
           return;
         }
-        const trips = await response.json();
-        const featured = (trips as TripData[]).find((t) => t.featured) ?? trips[0] ?? defaultTrips[0];
-        setFeaturedTrip(featured);
+        const data = await response.json();
+
+if (Array.isArray(data) && data.length > 0) {
+  setTrips(data);
+
+  const featured =
+    (data as TripData[]).find((t) => t.featured) ??
+    data[0] ??
+    defaultTrips[0];
+
+  setFeaturedTrip(featured);
+}
       } catch {
         setFeaturedTrip(defaultTrips.find((t) => t.featured) ?? defaultTrips[0]);
       }
@@ -82,7 +92,7 @@ export default function Home() {
             </a>
           </nav>
 
-          <details className="relative sm:hidden">
+          <details className="relative md:hidden">
             <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-md transition hover:border-white/50">
               <span className="text-2xl leading-none">☰</span>
             </summary>
@@ -166,7 +176,7 @@ export default function Home() {
 
               <a
                  href="/trips"
-                 className="hero-button relative z-20 inline-flex w-fit rounded-full bg-white px-7 py-4 text-sm font-bold text-[#17251d] opacity-100 transition hover:bg-orange-400 hover:text-white"
+                 className="hero-button relative z-20 inline-flex w-fit rounded-full bg-white px-6 py-4 text-sm font-bold text-[#17251d] opacity-100 transition hover:bg-orange-400 hover:text-white sm:px-7"
               >
                 Book your trek
                 <span className="ml-3 text-lg">↗</span>
@@ -176,23 +186,23 @@ export default function Home() {
           </div>
 
           {/* Bottom Info */}
-          <div className="hero-stats mt-16 flex flex-wrap gap-x-10 gap-y-4 border-t border-white/20 pt-6 text-sm text-white/70">
+          <div className="hero-stats mt-12 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/20 pt-5 text-xs text-white/70 sm:mt-16 sm:gap-x-10 sm:gap-y-4 sm:pt-6 sm:text-sm">
 
             <span>
-              <strong className="text-white">From ₹2,499</strong>
-            </span>
+  <strong className="text-white">6000M+ Expeditions</strong>
+</span>
 
-            <span>
-              <strong className="text-white">1–10 days</strong>
-            </span>
+<span>
+  <strong className="text-white">10,000+ Travelers</strong>
+</span>
 
-            <span>
-              <strong className="text-white">Across India</strong>
-            </span>
+<span>
+  <strong className="text-white">Across India</strong>
+</span>
 
-            <span>
-              <strong className="text-white">Limited seats</strong>
-            </span>
+<span>
+  <strong className="text-white">Small Groups</strong>
+</span>
 
           </div>
 
@@ -210,7 +220,7 @@ export default function Home() {
 
 
       {/* INTRODUCTION */}
-      <section id="about" className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10 lg:py-32">
+      <section id="about" className="mx-auto max-w-[1400px] px-6 py-16 sm:py-20 lg:px-10 lg:py-32">
 
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-24">
 
@@ -243,7 +253,7 @@ export default function Home() {
 
 
       {/* FEATURED DEPARTURE */}
-      <section className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10 lg:py-28">
+      <section className="mx-auto max-w-[1400px] px-6 py-16 sm:py-20 lg:px-10 lg:py-28">
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
@@ -265,7 +275,7 @@ export default function Home() {
 
         <div className="grid gap-8 overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.06)] lg:grid-cols-[1.1fr_0.9fr]">
           <div
-            className="min-h-[340px] bg-cover bg-center"
+  className="min-h-[260px] sm:min-h-[340px] bg-cover bg-center"
             style={{ backgroundImage: `url('${featuredTrip.image}')` }}
           />
 
@@ -314,7 +324,7 @@ export default function Home() {
       {/* DESTINATIONS */}
       <section
         id="destinations"
-        className="bg-[#17251d] px-6 py-24 text-white lg:px-10 lg:py-32"
+        className="bg-[#17251d] px-6 py-16 text-white sm:py-20 lg:px-10 lg:py-32"
       >
         <div className="mx-auto max-w-[1400px]">
           <div className="mb-14 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
@@ -348,7 +358,7 @@ export default function Home() {
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {tripCategories.map((category, index) => {
-              const categoryTrips = defaultTrips.filter((trip) => trip.category === category);
+              const categoryTrips = trips.filter((trip) => trip.category === category);
               const categoryImage =
                 category === "Sahyadri"
                   ? "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85"
@@ -365,7 +375,7 @@ export default function Home() {
               return (
                 <div
                   key={category}
-                  className="group relative min-h-[480px] overflow-hidden rounded-[28px] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.18)] transition duration-500 hover:-translate-y-1 hover:border-orange-300/70"
+                  className="group relative min-h-[420px] sm:min-h-[480px] overflow-hidden rounded-[28px] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.18)] transition duration-500 hover:-translate-y-1 hover:border-orange-300/70"
                 >
                   <div
                     className="absolute inset-0 bg-cover bg-center transition duration-700 group-hover:scale-105"
@@ -446,110 +456,98 @@ export default function Home() {
 
 
       {/* UPCOMING ADVENTURES */}
-      <section
-        id="adventures"
-        className="mx-auto max-w-[1400px] px-6 py-24 lg:px-10 lg:py-32"
-      >
-        <div className="mb-14 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
-              Upcoming
-            </p>
+<section
+  id="adventures"
+  className="mx-auto max-w-[1400px] px-6 py-16 sm:py-20 lg:px-10 lg:py-32"
+>
+  <div className="mb-14 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
+        Upcoming
+      </p>
 
-            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Adventures worth
-              <br />
-              <span className="text-[#8a958e]">leaving home for.</span>
-            </h2>
+      <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+        Adventures worth
+        <br />
+        <span className="text-[#8a958e]">leaving home for.</span>
+      </h2>
+    </div>
+
+    <a
+      href="#contact"
+      className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-[#17251d]/5 px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
+    >
+      Plan a custom trip
+      <span className="ml-2 text-base">↗</span>
+    </a>
+  </div>
+
+  <div className="divide-y divide-black/10 border-y border-black/10">
+  {trips.filter((trip) => trip.upcoming).length > 0 ? (
+    trips
+      .filter((trip) => trip.upcoming)
+      .map((trip, index) => (
+        <a
+          key={trip.slug}
+          href={`/trips/${trip.slug}`}
+          className="group flex flex-col gap-5 py-8 transition duration-300 hover:px-2 md:flex-row md:items-center md:justify-between"
+        >
+          <div className="flex items-center gap-5 sm:gap-6">
+            <span className="text-sm font-medium text-black/30">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+
+            <div>
+              <h3 className="text-2xl font-bold md:text-3xl">
+                {trip.title}
+              </h3>
+
+              <p className="mt-1 text-sm text-black/50">
+                {trip.category}
+              </p>
+            </div>
           </div>
 
-          <a
-            href="#contact"
-            className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-[#17251d]/5 px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
-          >
-            Plan a custom trip
-            <span className="ml-2 text-base">↗</span>
-          </a>
-        </div>
-
-        <div className="divide-y divide-black/10 border-y border-black/10">
-          {[
-            {
-              number: "01",
-              title: "Kusur Plateau",
-              region: "Sahyadri",
-              duration: "1 Day",
-              price: "₹2,499 / person",
-              detail: "Sunrise climb + valley views + a quick forest trail.",
-            },
-            {
-              number: "02",
-              title: "Harishchandragad",
-              region: "Sahyadri",
-              duration: "2 Days",
-              price: "₹4,899 / person",
-              detail: "Fort basecamp, ridge trails, and a memorable night under the stars.",
-            },
-            {
-              number: "03",
-              title: "Leh Ladakh",
-              region: "Himalayas",
-              duration: "9 Days",
-              price: "₹18,999 / person",
-              detail: "High passes, mountain roads, and vast desert terrain across the Indian Himalayas.",
-            },
-            {
-              number: "04",
-              title: "Spiti Valley",
-              region: "Himachal",
-              duration: "8 Days",
-              price: "₹16,499 / person",
-              detail: "Remote villages, dramatic passes, and timeless alpine landscapes.",
-            },
-          ].map((trip) => (
-            <div
-              key={trip.number}
-              className="group flex flex-col gap-5 py-8 transition duration-300 hover:px-2 md:flex-row md:items-center md:justify-between"
-            >
-              <div className="flex items-center gap-5 sm:gap-6">
-                <span className="text-sm font-medium text-black/30">{trip.number}</span>
-
-                <div>
-                  <h3 className="text-2xl font-bold md:text-3xl">{trip.title}</h3>
-                  <p className="mt-1 text-sm text-black/50">{trip.region}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
-                <div className="max-w-md">
-                  <p className="text-sm leading-6 text-black/60">{trip.detail}</p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">
-                      Starting from
-                    </p>
-                    <span className="mt-1 block text-sm font-semibold text-[#17251d]">
-                      {trip.price}
-                    </span>
-                  </div>
-
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-black/15 text-lg transition group-hover:bg-[#17251d] group-hover:text-white">
-                    ↗
-                  </span>
-                </div>
-              </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
+            <div className="max-w-md">
+              <p className="text-sm leading-6 text-black/60">
+                {trip.summary}
+              </p>
             </div>
-          ))}
-        </div>
-      </section>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">
+                  Starting from
+                </p>
+
+                <span className="mt-1 block text-sm font-semibold text-[#17251d]">
+                  {trip.price}
+                </span>
+              </div>
+
+              <span className="flex h-11 w-11 items-center justify-center rounded-full border border-black/15 text-lg transition group-hover:bg-[#17251d] group-hover:text-white">
+                ↗
+              </span>
+            </div>
+          </div>
+        </a>
+      ))
+  ) : (
+    <div className="px-6 py-12 text-center">
+      <p className="text-lg font-medium text-[#5d6862]">
+        New adventures are being planned. Check back soon.
+      </p>
+    </div>
+  )}
+</div>
+</section>
 
 
       {/* CORPORATE CTA */}
       <section
         id="contact"
-        className="relative overflow-hidden bg-[#e8e1d4] px-6 py-24 lg:px-10 lg:py-32"
+        className="relative overflow-hidden bg-[#e8e1d4] px-6 py-16 sm:py-20 lg:px-10 lg:py-32"
       >
         <div className="mx-auto max-w-[1400px]">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -558,7 +556,7 @@ export default function Home() {
                 Corporate Adventures
               </p>
 
-              <h2 className="text-5xl font-bold leading-[0.95] tracking-tight sm:text-6xl lg:text-8xl">
+              <h2 className="text-4xl font-bold leading-[0.95] tracking-tight sm:text-6xl lg:text-8xl">
                 Take your team
                 <br />
                 <span className="text-[#718078]">beyond the office.</span>
@@ -606,47 +604,54 @@ export default function Home() {
         </div>
       </section>
 
+            {/* FINAL CTA */}
+      <section className="bg-[#17251d] px-6 py-20 text-center text-white sm:py-28 lg:px-10 lg:py-36">
+        <div className="mx-auto max-w-[1400px]">
 
-      {/* FINAL CTA */}
-      <section className="bg-[#17251d] px-6 py-28 text-center text-white lg:px-10 lg:py-40">
+          <p className="mb-5 text-sm font-bold uppercase tracking-[0.3em] text-orange-400">
+            Your story starts here
+          </p>
 
-        <p className="mb-5 text-sm font-bold uppercase tracking-[0.3em] text-orange-400">
-          Your story starts here
-        </p>
+          <h2 className="mx-auto max-w-5xl text-5xl font-bold leading-[0.95] tracking-tight sm:text-6xl lg:text-8xl">
+            WHERE WILL YOUR
+            <br />
+            NEXT CHAPTER
+            <br />
+            <span className="text-orange-400">BEGIN?</span>
+          </h2>
 
-        <h2 className="mx-auto max-w-5xl text-5xl font-bold leading-[0.95] tracking-tight sm:text-6xl lg:text-8xl">
-          WHERE WILL YOUR
-          <br />
-          NEXT CHAPTER
-          <br />
-          <span className="text-orange-400">BEGIN?</span>
-        </h2>
+          <a
+            href="#adventures"
+            className="mt-10 inline-flex rounded-full bg-white px-8 py-4 font-semibold text-[#17251d] transition hover:bg-orange-400 hover:text-white"
+          >
+            Reserve Your Spot ↗
+          </a>
 
-        <a
-          href="#adventures"
-          className="mt-10 inline-flex rounded-full bg-white px-8 py-4 font-semibold text-[#17251d] transition hover:bg-orange-400 hover:text-white"
-        >
-          Reserve Your Spot ↗
-        </a>
-
+        </div>
       </section>
-
 
       {/* FOOTER */}
       <footer className="bg-[#101812] px-6 py-10 text-white lg:px-10">
         <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-8 md:flex-row md:items-center">
+
           <div>
-            <div className="text-xl font-bold tracking-[0.08em]">BUCKETLIST</div>
+            <div className="text-xl font-bold tracking-[0.08em]">
+              BUCKETLIST
+            </div>
+
             <div className="mt-1 text-[10px] tracking-[0.35em] text-white/50">
               ADVENTURE
             </div>
           </div>
 
-          <p className="text-sm text-white/45">We Plan It. You Live It.</p>
+          <p className="text-sm text-white/45">
+            We Plan It. You Live It.
+          </p>
 
           <p className="text-sm text-white/45">
             © {new Date().getFullYear()} Bucketlist Adventure
           </p>
+
         </div>
       </footer>
 

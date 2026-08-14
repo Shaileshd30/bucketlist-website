@@ -36,7 +36,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
   const primaryImage = selectedImage || gallery[0] || trip.image;
 
   const overview = trip.overview || trip.description || "";
-  const itinerary = trip.itinerary || [];
+  const itinerary: Array<string | { day?: string; time?: string; activity: string }> = trip.itinerary || [];
   const includes = trip.includes || [];
   const excludes = trip.notIncludes || [];
   const pickupPoints = trip.pickupPoints || [];
@@ -62,6 +62,23 @@ export function TripPageClient({ trip }: { trip: TripData }) {
 
     const url = `https://wa.me/918482846287?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const renderItineraryItem = (item: string | { day?: string; time?: string; activity: string }) => {
+    if (typeof item === "string") {
+      return item;
+    }
+
+    return (
+      <>
+        {(item.day || item.time) && (
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-[#17251d]/60">
+            {[item.day, item.time].filter(Boolean).join(" ")}
+          </span>
+        )}
+        <span>{item.activity}</span>
+      </>
+    );
   };
 
   return (
@@ -148,10 +165,13 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                       primaryImage === image ? "border-orange-500 ring-2 ring-orange-200" : "border-black/10"
                     }`}
                   >
-                    <div
-                      className="h-28 w-full bg-cover bg-center"
-                      style={{ backgroundImage: `url('${image}')` }}
-                    />
+                    <div className="h-28 w-full overflow-hidden bg-[#f7f5f2]">
+  <img
+    src={image}
+    alt={`${trip.title} thumbnail ${index + 1}`}
+    className="h-full w-full object-cover object-center"
+  />
+</div>
                   </button>
                 ))}
               </div>
@@ -172,7 +192,13 @@ export function TripPageClient({ trip }: { trip: TripData }) {
               >
                 Close
               </button>
-              <div className="h-[75vh] w-full bg-cover bg-center" style={{ backgroundImage: `url('${primaryImage}')` }} />
+              <div className="flex h-[75vh] w-full items-center justify-center bg-[#0d1411]">
+  <img
+    src={primaryImage}
+    alt={`${trip.title} full size`}
+    className="max-h-full max-w-full object-contain"
+  />
+</div>
             </div>
           </div>
         )}
@@ -187,11 +213,14 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                 <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">Itinerary</p>
                 <ol className="space-y-4">
                   {itinerary.map((item, index) => (
-                    <li key={`${item}-${index}`} className="flex gap-4 rounded-2xl bg-[#f7f5f2] p-4">
+                    <li
+                      key={`${typeof item === "string" ? item : item.activity}-${index}`}
+                      className="flex gap-4 rounded-2xl bg-[#f7f5f2] p-4"
+                    >
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#17251d] text-xs font-bold text-white">
                         {index + 1}
                       </span>
-                      <p className="text-[#17251d]">{item}</p>
+                      <p className="text-[#17251d]">{renderItineraryItem(item)}</p>
                     </li>
                   ))}
                 </ol>

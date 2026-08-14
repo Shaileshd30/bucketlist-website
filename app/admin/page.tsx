@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { defaultTrips, tripCategories, type TripCategory, type TripData } from "../data/trips";
 
 const ADMIN_PASSWORD = "bucketlist123";
+const createSlug = (title: string) =>
+  title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -176,7 +183,7 @@ export default function AdminPage() {
     const category: TripCategory = trip?.category ?? "Sahyadri";
     const nextTrip: TripData = {
       id: `trip-${Date.now()}`,
-      slug: `new-trip-${Date.now()}`,
+      slug: "new-trip",
       title: "New trip",
       subtitle: "Add a compelling short description",
       summary: "Write a short overview for this trip.",
@@ -438,10 +445,29 @@ export default function AdminPage() {
             <label className="space-y-2 text-sm font-medium text-[#17251d]">
               <span>Trip title</span>
               <input
-                value={trip.title}
-                onChange={(event) => updateField("title", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
+  value={trip.title}
+  onChange={(event) => {
+    const newTitle = event.target.value;
+
+    setSiteSynced(false);
+    setStatus(null);
+
+    setTrips((current) =>
+      current.map((item) =>
+        item.slug === selectedSlug
+          ? {
+              ...item,
+              title: newTitle,
+              slug: createSlug(newTitle),
+            }
+          : item
+      )
+    );
+
+    setSelectedSlug(createSlug(newTitle));
+  }}
+  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+/>
             </label>
 
             <label className="space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
@@ -692,6 +718,28 @@ export default function AdminPage() {
               className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
             />
           </label>
+          <label className="mt-5 flex items-center gap-3 rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm font-medium text-[#17251d]">
+  <input
+    type="checkbox"
+    checked={trip.upcoming ?? false}
+    onChange={(event) => {
+      setSiteSynced(false);
+      setStatus(null);
+      setTrips((current) =>
+        current.map((item) =>
+          item.slug === selectedSlug
+            ? { ...item, upcoming: event.target.checked }
+            : item
+        )
+      );
+    }}
+    className="h-5 w-5 accent-orange-500"
+  />
+
+  <span>
+    Show this trip in <strong>Upcoming Adventures</strong>
+  </span>
+</label>
 
           <div className="mt-8 flex gap-3">
             <button
