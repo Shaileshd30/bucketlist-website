@@ -1,16 +1,23 @@
 "use client";
 
+import CouponManager from "./components/CouponManager";
 import { useEffect, useState } from "react";
-import { defaultTrips, tripCategories, type TripCategory, type TripData } from "../data/trips";
+import {
+  defaultTrips,
+  tripCategories,
+  type TripBatch,
+  type TripCategory,
+  type TripData,
+} from "../data/trips";
 
 const ADMIN_PASSWORD = "bucketlist123";
+
 const createSlug = (title: string) =>
   title
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -28,6 +35,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [siteSynced, setSiteSynced] = useState(true);
+  const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS">("TRIPS");
 
   const trip = trips.find((item) => item.slug === selectedSlug) ?? trips[0] ?? defaultTrips[0];
 
@@ -64,6 +72,115 @@ export default function AdminPage() {
       )
     );
   };
+  const updateBatch = (
+  batchId: string,
+  field: keyof TripBatch,
+  value: string | number | boolean
+) => {
+  setStatus(null);
+  setSiteSynced(false);
+
+  setTrips((current) =>
+    current.map((item) => {
+      if (item.slug !== selectedSlug) {
+        return item;
+      }
+
+      return {
+        ...item,
+        batches: (item.batches || []).map((batch) =>
+          batch.id === batchId
+            ? {
+                ...batch,
+                [field]: value,
+              }
+            : batch
+        ),
+      };
+    })
+  );
+};
+
+const addBatch = () => {
+  const batchId = `${trip.slug}-${Date.now()}`;
+
+  const newBatch: TripBatch = {
+    id: batchId,
+
+    departureDate: "",
+    returnDate: "",
+
+    price: 0,
+
+    totalSeats: 20,
+    bookedSeats: 0,
+
+    paymentMode: "FULL",
+    advanceAmount: 0,
+
+    status: "DRAFT",
+    visibility: "PUBLIC",
+
+    bookingEnabled: false,
+  };
+
+  setSiteSynced(false);
+  setStatus(null);
+
+  setTrips((current) =>
+    current.map((item) =>
+      item.slug === selectedSlug
+        ? {
+            ...item,
+            batches: [...(item.batches || []), newBatch],
+          }
+        : item
+    )
+  );
+
+  setStatus({
+    type: "success",
+    message: "New departure added. Complete the details and save changes.",
+  });
+};
+
+const deleteBatch = (batchId: string) => {
+  const batch = trip.batches?.find((item) => item.id === batchId);
+
+  if (!batch) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete departure ${
+      batch.departureDate || "without a date"
+    } from ${trip.title}?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setSiteSynced(false);
+
+  setTrips((current) =>
+    current.map((item) =>
+      item.slug === selectedSlug
+        ? {
+            ...item,
+            batches: (item.batches || []).filter(
+              (batchItem) => batchItem.id !== batchId
+            ),
+          }
+        : item
+    )
+  );
+
+  setStatus({
+    type: "success",
+    message: "Departure removed. Save changes to persist it.",
+  });
+};
 
   const setMainImage = (imageUrl: string) => {
     setSiteSynced(false);
@@ -182,26 +299,45 @@ export default function AdminPage() {
   const addTrip = () => {
     const category: TripCategory = trip?.category ?? "Sahyadri";
     const nextTrip: TripData = {
-      id: `trip-${Date.now()}`,
-      slug: "new-trip",
-      title: "New trip",
-      subtitle: "Add a compelling short description",
-      summary: "Write a short overview for this trip.",
-      cta: "Book this trip",
-      price: "From ₹0 / person",
-      duration: "3 Days",
-      seats: "Open seats",
-      difficulty: "Easy",
-      startPoint: "Starting point",
-      groupSize: "Small group",
-      description: "Describe the experience, route, and highlights for travelers here.",
-      category,
-      image:
-        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
-      itinerary: ["Day 1 arrival and briefing", "Day 2 adventure day", "Day 3 return and wrap-up"],
-      includes: ["Stay", "Meals", "Guide support"],
-      notIncludes: ["Flights", "Personal gear"],
-    };
+  id: `trip-${Date.now()}`,
+  slug: `new-trip-${Date.now()}`,
+  title: "New trip",
+
+  tripType: "Fixed Departure",
+
+  subtitle: "Add a compelling short description",
+  summary: "Write a short overview for this trip.",
+  cta: "Book this trip",
+
+  difficulty: "Easy",
+  startPoint: "Starting point",
+
+  durationDays: 1,
+
+  groupSize: "Small group",
+
+  description:
+    "Describe the experience, route, and highlights for travelers here.",
+
+  category,
+
+  image:
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
+
+  itinerary: [
+    "Add itinerary details here",
+  ],
+
+  includes: [
+    "Add inclusions here",
+  ],
+
+  notIncludes: [
+    "Add exclusions here",
+  ],
+
+  batches: [],
+};
 
     setSiteSynced(false);
     setTrips((current) => [...current, nextTrip]);
@@ -410,6 +546,33 @@ export default function AdminPage() {
           </div>
         </div>
 
+        <div className="mb-6 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setAdminSection("TRIPS")}
+            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+              adminSection === "TRIPS"
+                ? "bg-[#17251d] text-white"
+                : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
+            }`}
+          >
+            Trips & Departures
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAdminSection("COUPONS")}
+            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+              adminSection === "COUPONS"
+                ? "bg-[#17251d] text-white"
+                : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
+            }`}
+          >
+            Coupons & Discounts
+          </button>
+        </div>
+
+        {adminSection === "TRIPS" && (
         <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(0,0,0,0.06)] lg:p-8">
           <label className="mb-6 block space-y-2 text-sm font-medium text-[#17251d]">
             <span>Select trip</span>
@@ -426,123 +589,324 @@ export default function AdminPage() {
             </select>
           </label>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Trip category</span>
-              <select
-                value={trip.category}
-                onChange={(event) => updateField("category", event.target.value as TripCategory)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+          <div className="mt-8 rounded-[28px] border border-black/10 bg-[#f7f5f2] p-5 lg:p-6">
+  <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.28em] text-orange-500">
+        Departures
+      </p>
+
+      <h2 className="mt-2 text-2xl font-bold text-[#17251d]">
+        Manage trip batches
+      </h2>
+
+      <p className="mt-2 text-sm text-[#5d6862]">
+        Each departure can have its own date, price, capacity and payment rules.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={addBatch}
+      className="inline-flex items-center justify-center rounded-full bg-[#17251d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-500"
+    >
+      + Add departure
+    </button>
+  </div>
+
+  {(trip.batches || []).length === 0 ? (
+    <div className="rounded-2xl border border-dashed border-black/15 bg-white p-8 text-center">
+      <p className="font-semibold text-[#17251d]">
+        No departures added yet
+      </p>
+
+      <p className="mt-2 text-sm text-[#5d6862]">
+        Add a departure before enabling direct booking for this trip.
+      </p>
+    </div>
+  ) : (
+    <div className="space-y-5">
+      {(trip.batches || []).map((batch, index) => {
+        const availableSeats = Math.max(
+          0,
+          batch.totalSeats - batch.bookedSeats
+        );
+
+        return (
+          <div
+            key={batch.id}
+            className="rounded-[24px] border border-black/10 bg-white p-5"
+          >
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-orange-500">
+                  Departure {index + 1}
+                </p>
+
+                <p className="mt-1 text-sm text-[#5d6862]">
+                  {batch.departureDate || "Date not set"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => deleteBatch(batch.id)}
+                className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
               >
-                {tripCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Delete
+              </button>
+            </div>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Trip title</span>
-              <input
-  value={trip.title}
-  onChange={(event) => {
-    const newTitle = event.target.value;
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-    setSiteSynced(false);
-    setStatus(null);
+              {/* Departure date */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Departure date</span>
 
-    setTrips((current) =>
-      current.map((item) =>
-        item.slug === selectedSlug
-          ? {
-              ...item,
-              title: newTitle,
-              slug: createSlug(newTitle),
-            }
-          : item
-      )
-    );
+                <input
+                  type="date"
+                  value={batch.departureDate}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "departureDate",
+                      event.target.value
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                />
+              </label>
 
-    setSelectedSlug(createSlug(newTitle));
-  }}
-  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-/>
-            </label>
+              {/* Return date */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Return date</span>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
-              <span>Image URL</span>
-              <input
-                value={trip.image}
-                onChange={(event) => updateField("image", event.target.value)}
-                placeholder="Paste a full image URL here"
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+                <input
+                  type="date"
+                  value={batch.returnDate}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "returnDate",
+                      event.target.value
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                />
+              </label>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Hero subtitle</span>
-              <input
-                value={trip.subtitle}
-                onChange={(event) => updateField("subtitle", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+              {/* Price */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Price per person ₹</span>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Price</span>
-              <input
-                value={trip.price}
-                onChange={(event) => updateField("price", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={batch.price}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "price",
+                      Number(event.target.value)
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                />
+              </label>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Duration</span>
-              <input
-                value={trip.duration}
-                onChange={(event) => updateField("duration", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+              {/* Total seats */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Total seats</span>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Seats left</span>
-              <input
-                value={trip.seats}
-                onChange={(event) => updateField("seats", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={batch.totalSeats}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "totalSeats",
+                      Math.max(1, Number(event.target.value))
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                />
+              </label>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Difficulty</span>
-              <input
-                value={trip.difficulty}
-                onChange={(event) => updateField("difficulty", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+              {/* Booked seats */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Booked seats</span>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Start point</span>
-              <input
-                value={trip.startPoint}
-                onChange={(event) => updateField("startPoint", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={batch.totalSeats}
+                  value={batch.bookedSeats}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "bookedSeats",
+                      Math.min(
+                        batch.totalSeats,
+                        Math.max(0, Number(event.target.value))
+                      )
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                />
+              </label>
 
-            <label className="space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Group size</span>
-              <input
-                value={trip.groupSize}
-                onChange={(event) => updateField("groupSize", event.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+              {/* Available seats */}
+              <div className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Available seats</span>
+
+                <div className="flex h-[50px] items-center rounded-2xl border border-green-200 bg-green-50 px-4 font-bold text-green-700">
+                  {availableSeats}
+                </div>
+              </div>
+
+              {/* Payment mode */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Payment mode</span>
+
+                <select
+                  value={batch.paymentMode}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "paymentMode",
+                      event.target.value as TripBatch["paymentMode"]
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                >
+                  <option value="FULL">Full payment</option>
+                  <option value="ADVANCE">Advance payment</option>
+                </select>
+              </label>
+
+              {/* Advance */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Advance per person ₹</span>
+
+                <input
+                  type="number"
+                  min="0"
+                  max={batch.price}
+                  value={batch.advanceAmount}
+                  disabled={batch.paymentMode === "FULL"}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "advanceAmount",
+                      Number(event.target.value)
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </label>
+
+              {/* Status */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Status</span>
+
+                <select
+                  value={batch.status}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "status",
+                      event.target.value as TripBatch["status"]
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                >
+                  <option value="DRAFT">Draft</option>
+                  <option value="OPEN">Open</option>
+                  <option value="FULL">Full</option>
+                  <option value="CLOSED">Closed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </label>
+
+              {/* Visibility */}
+              <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Visibility</span>
+
+                <select
+                  value={batch.visibility}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "visibility",
+                      event.target.value as TripBatch["visibility"]
+                    )
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="PRIVATE">Private</option>
+                  <option value="HIDDEN">Hidden</option>
+                </select>
+              </label>
+
+              {/* Booking */}
+              <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm font-medium text-[#17251d]">
+                <input
+                  type="checkbox"
+                  checked={batch.bookingEnabled}
+                  onChange={(event) =>
+                    updateBatch(
+                      batch.id,
+                      "bookingEnabled",
+                      event.target.checked
+                    )
+                  }
+                  className="h-5 w-5 accent-orange-500"
+                />
+
+                <span>Allow online booking</span>
+              </label>
+            </div>
+
+            <div className="mt-5 grid grid-cols-3 gap-3 rounded-2xl bg-[#f7f5f2] p-4 text-center">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#17251d]/50">
+                  Capacity
+                </p>
+
+                <p className="mt-1 text-xl font-bold">
+                  {batch.totalSeats}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#17251d]/50">
+                  Booked
+                </p>
+
+                <p className="mt-1 text-xl font-bold">
+                  {batch.bookedSeats}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#17251d]/50">
+                  Available
+                </p>
+
+                <p className="mt-1 text-xl font-bold text-green-600">
+                  {availableSeats}
+                </p>
+              </div>
+            </div>
           </div>
+        );
+      })}
+    </div>
+  )}
+</div>
 
           <label className="mt-5 block space-y-2 text-sm font-medium text-[#17251d]">
             <span>Summary</span>
@@ -774,6 +1138,11 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+        )}
+
+        {adminSection === "COUPONS" && (
+          <CouponManager trips={trips} />
+        )}
       </div>
     </main>
   );

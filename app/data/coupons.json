@@ -1,0 +1,19 @@
+[
+  {
+    "id": "coupon-1787663600594",
+    "code": "RUTU100",
+    "description": "",
+    "discountType": "FIXED_AMOUNT",
+    "discountValue": 100,
+    "minimumBookingAmount": 2,
+    "validFrom": "2026-08-24",
+    "validUntil": "2026-08-29",
+    "usageLimit": 1,
+    "usedCount": 0,
+    "status": "ACTIVE",
+    "scope": "ALL_TRIPS",
+    "allowedTripSlugs": [],
+    "createdAt": "2026-08-25T13:13:20.594Z",
+    "updatedAt": "2026-08-25T13:13:55.347Z"
+  }
+]

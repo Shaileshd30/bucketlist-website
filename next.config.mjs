@@ -1,10 +1,4 @@
 ﻿/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'standalone',
-  experimental: {
-    turbopack: false,
-  },
-  webpack: (config) => config,
-};
+const nextConfig = {};
 
 export default nextConfig;

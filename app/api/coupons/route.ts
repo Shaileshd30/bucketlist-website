@@ -1,40 +1,38 @@
 import { promises as fs } from "fs";
 import path from "path";
 
+import type { Coupon } from "@/app/data/coupons";
+
 export const dynamic = "force-dynamic";
 
 const filePath = path.join(
   process.cwd(),
   "app",
   "data",
-  "trips.json"
+  "coupons.json"
 );
 
 export async function GET() {
   try {
     const data = await fs.readFile(filePath, "utf-8");
 
-    const trips = JSON.parse(data);
+    const coupons = JSON.parse(data);
 
-    return Response.json(trips, {
+    return Response.json(coupons, {
       headers: {
         "Cache-Control":
           "no-store, no-cache, must-revalidate, max-age=0",
       },
     });
   } catch (error) {
-    console.error("GET /api/trips failed:", error);
+    console.error("GET /api/coupons failed:", error);
 
     return Response.json(
       {
-        error: "Unable to load trips.",
+        error: "Unable to load coupons.",
       },
       {
         status: 500,
-        headers: {
-          "Cache-Control":
-            "no-store, no-cache, must-revalidate, max-age=0",
-        },
       }
     );
   }
@@ -42,12 +40,12 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Coupon[];
 
     if (!Array.isArray(body)) {
       return Response.json(
         {
-          error: "Trip data must be an array.",
+          error: "Coupon data must be an array.",
         },
         {
           status: 400,
@@ -55,16 +53,22 @@ export async function PUT(request: Request) {
       );
     }
 
+    const normalizedCoupons = body.map((coupon) => ({
+      ...coupon,
+      code: coupon.code.trim().toUpperCase(),
+      updatedAt: new Date().toISOString(),
+    }));
+
     await fs.writeFile(
       filePath,
-      JSON.stringify(body, null, 2),
+      JSON.stringify(normalizedCoupons, null, 2),
       "utf-8"
     );
 
     return Response.json(
       {
         ok: true,
-        tripsSaved: body.length,
+        couponsSaved: normalizedCoupons.length,
       },
       {
         headers: {
@@ -74,11 +78,11 @@ export async function PUT(request: Request) {
       }
     );
   } catch (error) {
-    console.error("PUT /api/trips failed:", error);
+    console.error("PUT /api/coupons failed:", error);
 
     return Response.json(
       {
-        error: "Unable to save trip data.",
+        error: "Unable to save coupons.",
       },
       {
         status: 500,
