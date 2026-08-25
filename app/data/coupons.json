@@ -9,11 +9,11 @@
     "validFrom": "2026-08-24",
     "validUntil": "2026-08-29",
     "usageLimit": 1,
-    "usedCount": 0,
+    "usedCount": 1,
     "status": "ACTIVE",
     "scope": "ALL_TRIPS",
     "allowedTripSlugs": [],
     "createdAt": "2026-08-25T13:13:20.594Z",
-    "updatedAt": "2026-08-25T13:13:55.347Z"
+    "updatedAt": "2026-08-25T16:07:11.688Z"
   }
 ]

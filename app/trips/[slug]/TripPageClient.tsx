@@ -100,6 +100,20 @@ export function TripPageClient({ trip }: { trip: TripData }) {
 
   const selectedBatch: TripBatch | null =
     availableBatches.find((batch) => batch.id === selectedBatchId) || null;
+    const nextBatch = availableBatches[0] || null;
+
+const displayBatch = selectedBatch || nextBatch;
+
+const displayDuration = trip.durationDays
+  ? `${trip.durationDays} ${trip.durationDays === 1 ? "Day" : "Days"}`
+  : trip.duration || "Flexible";
+
+const displayAvailableSeats = displayBatch
+  ? Math.max(
+      0,
+      displayBatch.totalSeats - (displayBatch.bookedSeats || 0)
+    )
+  : null;
 
   /*
    * Helpers
@@ -128,19 +142,14 @@ export function TripPageClient({ trip }: { trip: TripData }) {
   );
 
   const currentPrice =
-    selectedBatch?.price ??
-    (trip.price
-      ? Number(trip.price.replace(/[^0-9]/g, "")) || 0
-      : 0);
+  displayBatch?.price ??
+  (trip.price
+    ? Number(trip.price.replace(/[^0-9]/g, "")) || 0
+    : 0);
 
   const totalAmount = currentPrice * travelerCount;
 
-  const availableSeats = selectedBatch
-    ? Math.max(
-        0,
-        selectedBatch.totalSeats - (selectedBatch.bookedSeats || 0)
-      )
-    : null;
+  const availableSeats = displayAvailableSeats;
 
   const isEnoughSeats =
     availableSeats === null ||
@@ -291,12 +300,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   </p>
 
                   <p className="mt-2 font-semibold">
-                    {trip.duration ||
-                      (trip.durationDays
-                        ? `${trip.durationDays} ${
-                            trip.durationDays === 1 ? "Day" : "Days"
-                          }`
-                        : "Flexible")}
+                    {displayDuration}
                   </p>
                 </div>
 
@@ -306,8 +310,8 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   </p>
 
                   <p className="mt-2 font-semibold">
-                    {selectedBatch
-                      ? formatDate(selectedBatch.departureDate)
+                      {displayBatch
+                      ? formatDate(displayBatch.departureDate)
                       : "On request"}
                   </p>
                 </div>
@@ -738,14 +742,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   <span>Duration</span>
 
                   <span className="font-semibold text-white">
-                    {trip.duration ||
-                      (trip.durationDays
-                        ? `${trip.durationDays} ${
-                            trip.durationDays === 1
-                              ? "Day"
-                              : "Days"
-                          }`
-                        : "Flexible")}
+                    {displayDuration}
                   </span>
                 </div>
 
@@ -761,14 +758,10 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   <span>Seats</span>
 
                   <span className="font-semibold text-white">
-                    {selectedBatch
-                      ? Math.max(
-                          0,
-                          selectedBatch.totalSeats -
-                            (selectedBatch.bookedSeats || 0)
-                        )
-                      : trip.seats || "On request"}
-                  </span>
+                   {displayAvailableSeats !== null
+                   ? `${displayAvailableSeats} available`
+                   : trip.seats || "On request"}
+                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -930,12 +923,19 @@ export function TripPageClient({ trip }: { trip: TripData }) {
               .filter((item: TripData) => item.slug !== trip.slug)
               .slice(0, 3)
               .map((item: TripData) => {
-                const nextBatch = item.batches?.find(
-                  (batch) =>
-                    batch.visibility === "PUBLIC" &&
-                    batch.status === "OPEN" &&
-                    batch.bookingEnabled
-                );
+                const nextBatch = item.batches
+  ?.filter(
+    (batch) =>
+      batch.visibility === "PUBLIC" &&
+      batch.status === "OPEN" &&
+      batch.bookingEnabled &&
+      batch.totalSeats - (batch.bookedSeats || 0) > 0
+  )
+  .sort(
+    (a, b) =>
+      new Date(a.departureDate).getTime() -
+      new Date(b.departureDate).getTime()
+  )[0];
 
                 return (
                   <Link

@@ -398,7 +398,7 @@
         "returnDate": "2026-08-30",
         "price": 1500,
         "totalSeats": 20,
-        "bookedSeats": 0,
+        "bookedSeats": 4,
         "paymentMode": "FULL",
         "advanceAmount": 0,
         "status": "OPEN",

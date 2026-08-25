@@ -29,6 +29,75 @@ type CouponResponse = {
   finalAmount: number;
 };
 
+type RazorpaySuccessResponse = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayCheckoutOptions = {
+  key: string;
+  amount: number | string;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  notes?: Record<string, string>;
+  theme?: { color?: string };
+  handler: (response: RazorpaySuccessResponse) => void | Promise<void>;
+  modal?: { ondismiss?: () => void };
+};
+
+type RazorpayInstance = {
+  open: () => void;
+  on: (
+    event: string,
+    handler: (response: { error?: { description?: string } }) => void
+  ) => void;
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => RazorpayInstance;
+  }
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(true), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function BookingPageClient() {
   const searchParams = useSearchParams();
 
@@ -49,6 +118,14 @@ export default function BookingPageClient() {
   });
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [createdBookingId, setCreatedBookingId] = useState("");
+
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
@@ -81,6 +158,10 @@ export default function BookingPageClient() {
     };
 
     loadTrips();
+  }, []);
+
+  useEffect(() => {
+    void loadRazorpayScript();
   }, []);
 
   const trip = useMemo(() => {
@@ -263,44 +344,198 @@ export default function BookingPageClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validTravelerCount]);
 
-  const handleContinue = () => {
-    if (!trip || !batch || !canContinue) {
+  const verifyPayment = async (
+    bookingId: string,
+    payment: RazorpaySuccessResponse
+  ) => {
+    const response = await fetch("/api/payments/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bookingId,
+        razorpay_order_id: payment.razorpay_order_id,
+        razorpay_payment_id: payment.razorpay_payment_id,
+        razorpay_signature: payment.razorpay_signature,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(
+        data?.error || "Payment verification failed. Please contact us."
+      );
+    }
+
+    setPaymentConfirmed(true);
+    setPaymentError("");
+  };
+
+  const openRazorpayCheckout = async (bookingId: string) => {
+    setIsProcessingPayment(true);
+    setPaymentError("");
+
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+
+      if (!scriptLoaded || !window.Razorpay) {
+        throw new Error(
+          "Razorpay Checkout could not be loaded. Please check your internet connection and try again."
+        );
+      }
+
+      const orderResponse = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bookingId }),
+      });
+
+      const orderData = await orderResponse.json();
+
+      if (
+        !orderResponse.ok ||
+        !orderData?.ok ||
+        !orderData?.order?.id ||
+        !orderData?.keyId
+      ) {
+        throw new Error(
+          orderData?.error || "Unable to start payment. Please try again."
+        );
+      }
+
+      const options: RazorpayCheckoutOptions = {
+        key: orderData.keyId,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency || "INR",
+        name: "Bucketlist Adventure",
+        description: `${trip?.title || "Trip"} booking`,
+        order_id: orderData.order.id,
+        prefill: {
+          name: customer.name.trim(),
+          email: customer.email.trim(),
+          contact: customer.phone.trim(),
+        },
+        notes: {
+          bookingId,
+          tripSlug: trip?.slug || "",
+          batchId: batch?.id || "",
+        },
+        theme: {
+          color: "#17251d",
+        },
+        handler: async (paymentResponse) => {
+          setIsProcessingPayment(true);
+          setPaymentError("");
+
+          try {
+            await verifyPayment(bookingId, paymentResponse);
+          } catch (error) {
+            setPaymentError(
+              error instanceof Error
+                ? error.message
+                : "Payment verification failed. Please contact us with your booking ID."
+            );
+          } finally {
+            setIsProcessingPayment(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessingPayment(false);
+            setPaymentError(
+              "Payment window was closed. Your booking is still pending and you can retry payment."
+            );
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on("payment.failed", (response) => {
+        setIsProcessingPayment(false);
+        setPaymentError(
+          response.error?.description ||
+            "Payment failed. Please retry using another payment method."
+        );
+      });
+
+      razorpay.open();
+      setIsProcessingPayment(false);
+    } catch (error) {
+      setIsProcessingPayment(false);
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start Razorpay Checkout. Please try again."
+      );
+    }
+  };
+
+  const handleContinue = async () => {
+    if (
+      !trip ||
+      !batch ||
+      !canContinue ||
+      isCreatingBooking ||
+      isProcessingPayment
+    ) {
       return;
     }
 
-    const bookingPayload = {
-      tripId: trip.id,
-      tripSlug: trip.slug,
-      tripTitle: trip.title,
+    setBookingError("");
+    setPaymentError("");
 
-      batchId: batch.id,
-      departureDate: batch.departureDate,
-      returnDate: batch.returnDate,
+    if (createdBookingId) {
+      await openRazorpayCheckout(createdBookingId);
+      return;
+    }
 
-      travelers: validTravelerCount,
+    setIsCreatingBooking(true);
 
-      customer,
+    try {
+      const bookingPayload = {
+        tripId: trip.id,
+        tripSlug: trip.slug,
+        batchId: batch.id,
+        customerName: customer.name.trim(),
+        phone: customer.phone.trim(),
+        email: customer.email.trim(),
+        travelers: validTravelerCount,
+        couponCode: appliedCoupon?.code || undefined,
+      };
 
-      pricePerPerson: batch.price,
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookingPayload),
+      });
 
-      originalAmount,
+      const data = await response.json();
 
-      couponCode: appliedCoupon?.code || null,
-      discountAmount,
+      if (!response.ok || !data?.booking?.bookingId) {
+        throw new Error(
+          data?.error || "Unable to create your booking."
+        );
+      }
 
-      finalAmount,
-
-      amountToPay,
-      balanceAmount,
-
-      paymentMode: batch.paymentMode,
-    };
-
-    console.log("Booking payload:", bookingPayload);
-
-    alert(
-      "Booking details are ready. Payment integration will be connected in the next step."
-    );
+      const bookingId = data.booking.bookingId;
+      setCreatedBookingId(bookingId);
+      await openRazorpayCheckout(bookingId);
+    } catch (error) {
+      setBookingError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your booking. Please try again."
+      );
+    } finally {
+      setIsCreatingBooking(false);
+    }
   };
 
   if (!trip || !batch) {
@@ -721,12 +956,75 @@ export default function BookingPageClient() {
 
             <button
               type="button"
-              disabled={!canContinue}
+              disabled={
+                !canContinue ||
+                isCreatingBooking ||
+                isProcessingPayment ||
+                paymentConfirmed
+              }
               onClick={handleContinue}
               className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-5 py-4 text-sm font-bold text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Continue to Payment
+              {paymentConfirmed
+                ? "Payment Confirmed"
+                : isCreatingBooking
+                  ? "Creating Booking..."
+                  : isProcessingPayment
+                    ? "Starting Payment..."
+                    : createdBookingId
+                      ? "Retry Payment"
+                      : "Continue to Payment"}
             </button>
+
+            {bookingError && (
+              <div className="mt-4 rounded-2xl bg-red-500/15 p-4 text-sm text-red-200">
+                <p className="font-semibold">Booking could not be created</p>
+                <p className="mt-1">{bookingError}</p>
+              </div>
+            )}
+
+            {paymentError && !paymentConfirmed && (
+              <div className="mt-4 rounded-2xl bg-amber-500/15 p-4 text-sm text-amber-100">
+                <p className="font-semibold">Payment pending</p>
+                <p className="mt-1">{paymentError}</p>
+                {createdBookingId && (
+                  <p className="mt-2 text-xs text-white/70">
+                    Booking ID: {createdBookingId}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {createdBookingId && !paymentConfirmed && (
+              <div className="mt-4 rounded-2xl bg-white/5 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-300">
+                  Pending Booking
+                </p>
+                <p className="mt-2 text-lg font-bold text-white">
+                  {createdBookingId}
+                </p>
+                <p className="mt-2 text-sm text-white/70">
+                  Complete the Razorpay payment to confirm your seats.
+                </p>
+              </div>
+            )}
+
+            {paymentConfirmed && (
+              <div className="mt-4 rounded-2xl bg-green-500/15 p-5">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-green-300">
+                  Payment Successful
+                </p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  Booking Confirmed
+                </p>
+                <p className="mt-2 text-sm text-white/80">
+                  Booking ID: <strong>{createdBookingId}</strong>
+                </p>
+                <p className="mt-2 text-sm text-white/70">
+                  Your payment has been verified and your seats are confirmed.
+                </p>
+              </div>
+            )}
 
             {!bookingUnavailable &&
               !acceptedTerms && (
