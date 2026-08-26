@@ -267,7 +267,7 @@ export default function Home() {
       {/* Desktop nav */}
       <nav className="hidden items-center gap-8 rounded-full border border-white/15 bg-black/10 px-7 py-3 text-sm font-medium text-white/90 backdrop-blur-md lg:flex">
         <a
-          href="#about"
+          href="/about"
           className="transition hover:text-orange-400"
         >
           About
@@ -318,7 +318,7 @@ export default function Home() {
             <div className="flex flex-col text-sm font-semibold text-white">
 
               <a
-                href="#about"
+                href="/about"
                 className="rounded-xl px-4 py-3 transition hover:bg-white/10"
               >
                 About
@@ -2690,7 +2690,7 @@ export default function Home() {
         </p>
 
         <div className="mt-5 flex flex-col gap-3 text-sm text-white/60">
-          <a href="#about" className="transition hover:text-white">
+          <a href="/about" className="transition hover:text-white">
             About Us
           </a>
 
