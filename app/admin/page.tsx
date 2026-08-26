@@ -38,6 +38,7 @@ export default function AdminPage() {
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [siteSynced, setSiteSynced] = useState(true);
   const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS">("TRIPS");
+  const [newTripSlugs, setNewTripSlugs] = useState<string[]>([]);
 
   const trip = trips.find((item) => item.slug === selectedSlug) ?? trips[0] ?? defaultTrips[0];
 
@@ -79,26 +80,41 @@ export default function AdminPage() {
     setStatus(null);
     setSiteSynced(false);
 
-    const currentTrip = trips.find((item) => item.slug === selectedSlug);
+    const currentTrip = trips.find(
+      (item) => item.slug === selectedSlug
+    );
 
-    if (!currentTrip) {
+    if (!currentTrip) return;
+
+    const isNewTrip =
+      currentTrip.slug.startsWith("new-trip-") ||
+      newTripSlugs.includes(currentTrip.slug);
+
+    /*
+     * Existing published trips may have their visible title renamed,
+     * but their existing public URL stays unchanged.
+     */
+    if (!isNewTrip) {
+      setTrips((current) =>
+        current.map((item) =>
+          item.slug === selectedSlug
+            ? {
+                ...item,
+                title: value,
+              }
+            : item
+        )
+      );
+
       return;
     }
 
     /*
-     * New trips begin with a temporary slug such as:
-     * new-trip-123456789
-     *
-     * While the trip is still new, keep the URL in sync with the title.
-     * Existing published trips keep their current slug so renaming a title
-     * does not break indexed URLs or shared links.
+     * New trips keep generating their URL from the title until
+     * the trip is saved for the first time.
      */
-    const shouldGenerateSlug = currentTrip.slug.startsWith("new-trip-");
     const generatedSlug = createSlug(value);
-    const nextSlug =
-      shouldGenerateSlug && generatedSlug
-        ? generatedSlug
-        : currentTrip.slug;
+    const nextSlug = generatedSlug || currentTrip.slug;
 
     setTrips((current) =>
       current.map((item) =>
@@ -112,10 +128,24 @@ export default function AdminPage() {
       )
     );
 
+    setNewTripSlugs((current) => {
+      const withoutPreviousSlug = current.filter(
+        (slug) => slug !== selectedSlug
+      );
+
+      return Array.from(
+        new Set([
+          ...withoutPreviousSlug,
+          nextSlug,
+        ])
+      );
+    });
+
     if (nextSlug !== selectedSlug) {
       setSelectedSlug(nextSlug);
     }
   };
+
   const updateBatch = (
   batchId: string,
   field: keyof TripBatch,
@@ -341,52 +371,77 @@ const deleteBatch = (batchId: string) => {
   };
 
   const addTrip = () => {
-    const category: TripCategory = trip?.category ?? "Sahyadri";
+    const category: TripCategory =
+      trip?.category ?? "Sahyadri";
+
+    const timestamp = Date.now();
+    const temporarySlug = `new-trip-${timestamp}`;
+
     const nextTrip: TripData = {
-  id: `trip-${Date.now()}`,
-  slug: `new-trip-${Date.now()}`,
-  title: "New trip",
+      id: `trip-${timestamp}`,
+      slug: temporarySlug,
+      title: "New trip",
 
-  tripType: "Fixed Departure",
+      tripType: "Fixed Departure",
 
-  subtitle: "Add a compelling short description",
-  summary: "Write a short overview for this trip.",
-  cta: "Book this trip",
+      subtitle: "Add a compelling short description",
+      summary: "Write a short overview for this trip.",
+      cta: "Book this trip",
 
-  difficulty: "Easy",
-  startPoint: "Starting point",
+      difficulty: "Easy",
+      startPoint: "Starting point",
 
-  durationDays: 1,
+      durationDays: 1,
 
-  groupSize: "Small group",
+      groupSize: "Small group",
 
-  description:
-    "Describe the experience, route, and highlights for travelers here.",
+      description:
+        "Describe the experience, route, and highlights for travelers here.",
 
-  category,
+      category,
 
-  image:
-    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
+      image:
+        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
 
-  itinerary: [
-    "Add itinerary details here",
-  ],
+      itinerary: [
+        "Add itinerary details here",
+      ],
 
-  includes: [
-    "Add inclusions here",
-  ],
+      includes: [
+        "Add inclusions here",
+      ],
 
-  notIncludes: [
-    "Add exclusions here",
-  ],
+      notIncludes: [
+        "Add exclusions here",
+      ],
 
-  batches: [],
-};
+      batches: [],
+    };
 
     setSiteSynced(false);
-    setTrips((current) => [...current, nextTrip]);
-    setSelectedSlug(nextTrip.slug);
-    setStatus({ type: "success", message: "New trip added. Save to persist it." });
+
+    setTrips((current) => [
+      ...current,
+      nextTrip,
+    ]);
+
+    setNewTripSlugs((current) =>
+      Array.from(
+        new Set([
+          ...current,
+          temporarySlug,
+        ])
+      )
+    );
+
+    setSelectedSlug(temporarySlug);
+
+    setStatus({
+      type: "success",
+      message:
+        "New trip added. Enter the trip title and the URL will be generated automatically.",
+    });
+
     setError("");
   };
 
@@ -426,6 +481,17 @@ const deleteBatch = (batchId: string) => {
     setError("");
     setStatus({ type: "success", message: "Trip details saved successfully. Site sync complete." });
     setSiteSynced(true);
+
+    /*
+     * Once this trip has been saved, treat its URL as published/stable.
+     * Future title edits will not automatically change the public URL.
+     */
+    setNewTripSlugs((current) =>
+      current.filter(
+        (slug) =>
+          slug !== selectedSlug
+      )
+    );
 
     try {
       const refreshed = await fetch("/api/trips", { cache: "no-store" });
