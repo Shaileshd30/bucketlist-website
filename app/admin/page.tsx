@@ -74,6 +74,48 @@ export default function AdminPage() {
       )
     );
   };
+
+  const updateTripTitle = (value: string) => {
+    setStatus(null);
+    setSiteSynced(false);
+
+    const currentTrip = trips.find((item) => item.slug === selectedSlug);
+
+    if (!currentTrip) {
+      return;
+    }
+
+    /*
+     * New trips begin with a temporary slug such as:
+     * new-trip-123456789
+     *
+     * While the trip is still new, keep the URL in sync with the title.
+     * Existing published trips keep their current slug so renaming a title
+     * does not break indexed URLs or shared links.
+     */
+    const shouldGenerateSlug = currentTrip.slug.startsWith("new-trip-");
+    const generatedSlug = createSlug(value);
+    const nextSlug =
+      shouldGenerateSlug && generatedSlug
+        ? generatedSlug
+        : currentTrip.slug;
+
+    setTrips((current) =>
+      current.map((item) =>
+        item.slug === selectedSlug
+          ? {
+              ...item,
+              title: value,
+              slug: nextSlug,
+            }
+          : item
+      )
+    );
+
+    if (nextSlug !== selectedSlug) {
+      setSelectedSlug(nextSlug);
+    }
+  };
   const updateBatch = (
   batchId: string,
   field: keyof TripBatch,
@@ -655,6 +697,33 @@ const deleteBatch = (batchId: string) => {
               ))}
             </select>
           </label>
+
+          {/* BASIC TRIP DETAILS */}
+          <div className="mb-8 grid gap-5 rounded-[28px] border border-black/10 bg-[#f7f5f2] p-5 md:grid-cols-2 lg:p-6">
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Trip title</span>
+              <input
+                type="text"
+                value={trip.title}
+                onChange={(event) => updateTripTitle(event.target.value)}
+                placeholder="Example: Rajmachi Fort Trek"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+              <p className="text-xs leading-5 text-[#718078]">
+                This is the public trip name shown on the website.
+              </p>
+            </label>
+
+            <div className="space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Trip URL</span>
+              <div className="flex min-h-[50px] items-center rounded-2xl border border-black/10 bg-white px-4 text-sm text-[#5d6862]">
+                /trips/{trip.slug}
+              </div>
+              <p className="text-xs leading-5 text-[#718078]">
+                A new trip URL is generated automatically from its title. Existing trip URLs stay unchanged when you rename the title.
+              </p>
+            </div>
+          </div>
 
           <div className="mt-8 rounded-[28px] border border-black/10 bg-[#f7f5f2] p-5 lg:p-6">
   <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
