@@ -109,6 +109,133 @@ export const metadata: Metadata = {
   category: "travel",
 };
 
+const structuredData = {
+  "@context": "https://schema.org",
+
+  "@graph": [
+    {
+      "@type": [
+        "TravelAgency",
+        "Organization",
+      ],
+
+      "@id":
+        "https://bucketlistadventure.in/#organization",
+
+      name: "Bucketlist Adventure",
+
+      legalName:
+        "Bucketlist Destinations",
+
+      url:
+        "https://bucketlistadventure.in",
+
+      logo:
+        "https://bucketlistadventure.in/bucketlist-logo.png",
+
+      image:
+        "https://bucketlistadventure.in/bucketlist-logo.png",
+
+      description:
+        "Bucketlist Adventure creates thoughtfully planned treks, Himalayan expeditions, weekend adventures, road trips, corporate outings and customized journeys across India and beyond.",
+
+      slogan:
+        "We Plan It. You Live It.",
+
+      telephone:
+        "+91-92255-31257",
+
+      email:
+        "bucketlistdestinations2@gmail.com",
+
+      address: {
+        "@type":
+          "PostalAddress",
+
+        streetAddress:
+          "U7/C7, Runwal Platinum, NDA Pashan Road",
+
+        addressLocality:
+          "Bavdhan",
+
+        addressRegion:
+          "Maharashtra",
+
+        postalCode:
+          "411021",
+
+        addressCountry:
+          "IN",
+      },
+
+      areaServed: [
+        {
+          "@type":
+            "Country",
+          name:
+            "India",
+        },
+        {
+          "@type":
+            "AdministrativeArea",
+          name:
+            "Maharashtra",
+        },
+      ],
+
+      sameAs: [
+        "https://www.instagram.com/bucketlistadventuure/",
+        "https://www.facebook.com/bucketlistadventures2018/",
+        "https://maps.google.com/?cid=5483795621541448135",
+      ],
+
+      contactPoint: [
+        {
+          "@type":
+            "ContactPoint",
+
+          telephone:
+            "+91-92255-31257",
+
+          contactType:
+            "customer service",
+
+          areaServed:
+            "IN",
+
+          availableLanguage: [
+            "English",
+            "Hindi",
+            "Marathi",
+          ],
+        },
+      ],
+    },
+
+    {
+      "@type":
+        "WebSite",
+
+      "@id":
+        "https://bucketlistadventure.in/#website",
+
+      url:
+        "https://bucketlistadventure.in",
+
+      name:
+        "Bucketlist Adventure",
+
+      publisher: {
+        "@id":
+          "https://bucketlistadventure.in/#organization",
+      },
+
+      inLanguage:
+        "en-IN",
+    },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: LayoutProps<"/">) {
@@ -118,6 +245,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html:
+              JSON.stringify(
+                structuredData
+              ),
+          }}
+        />
+
         {children}
       </body>
     </html>
