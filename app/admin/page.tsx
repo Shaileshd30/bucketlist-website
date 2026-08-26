@@ -789,6 +789,37 @@ const deleteBatch = (batchId: string) => {
                 A new trip URL is generated automatically from its title. Existing trip URLs stay unchanged when you rename the title.
               </p>
             </div>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Category</span>
+              <select
+                value={trip.category}
+                onChange={(event) => {
+                  setStatus(null);
+                  setSiteSynced(false);
+                  setTrips((current) =>
+                    current.map((item) =>
+                      item.slug === selectedSlug
+                        ? {
+                            ...item,
+                            category: event.target.value as TripCategory,
+                          }
+                        : item
+                    )
+                  );
+                }}
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              >
+                {tripCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs leading-5 text-[#718078]">
+                Choose where this trip should appear on the public Trips page.
+              </p>
+            </label>
           </div>
 
           <div className="mt-8 rounded-[28px] border border-black/10 bg-[#f7f5f2] p-5 lg:p-6">
