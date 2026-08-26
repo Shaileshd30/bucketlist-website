@@ -589,6 +589,31 @@ export default async function TripsPage() {
           </p>
 
         </header>
+        <div className="mb-12 overflow-hidden rounded-[28px] border border-black/10 bg-white p-6 sm:p-8">
+  <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">
+        Trekking from Pune
+      </p>
+
+      <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+        Looking for treks near Pune?
+      </h2>
+
+      <p className="mt-3 max-w-2xl text-sm leading-7 text-[#5d6862]">
+        Explore Sahyadri forts, one-day treks, monsoon trails,
+        waterfalls and upcoming weekend treks from Pune.
+      </p>
+    </div>
+
+    <Link
+      href="/treks-near-pune"
+      className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#17251d] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-orange-500"
+    >
+      Explore Pune Treks ↗
+    </Link>
+  </div>
+</div>
 
         {/* QUICK DISCOVERY */}
         <div className="mb-14 flex flex-wrap gap-3">
