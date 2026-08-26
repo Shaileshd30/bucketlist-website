@@ -10,7 +10,7 @@ import {
   type TripData,
 } from "../data/trips";
 
-const ADMIN_PASSWORD = "bucketlist123";
+
 
 const createSlug = (title: string) =>
   title
@@ -30,8 +30,10 @@ const readFileAsDataUrl = (file: File) =>
 export default function AdminPage() {
   const [trips, setTrips] = useState<TripData[]>(defaultTrips);
   const [selectedSlug, setSelectedSlug] = useState(defaultTrips[0]?.slug ?? "");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [siteSynced, setSiteSynced] = useState(true);
@@ -419,17 +421,44 @@ const deleteBatch = (batchId: string) => {
     }
   };
 
-  const handleLogin = (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleLogin = async (event: React.FormEvent) => {
+  event.preventDefault();
 
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      setError("");
+  setError("");
+  setIsLoggingIn(true);
+
+  try {
+    const response = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: username.trim(),
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.ok) {
+      setError(
+        data?.error || "Incorrect username or password."
+      );
       return;
     }
 
-    setError("Incorrect password. Please try again.");
-  };
+    setIsAuthenticated(true);
+    setPassword("");
+    setError("");
+  } catch {
+    setError(
+      "Unable to log in right now. Please try again."
+    );
+  } finally {
+    setIsLoggingIn(false);
+  }
+};
 
   if (!isAuthenticated) {
     return (
@@ -444,24 +473,49 @@ const deleteBatch = (batchId: string) => {
 
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
             <label className="block space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Password</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter admin password"
-                className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-              />
-            </label>
+             <span>Username</span>
+
+             <input
+            type="text"
+    value={username}
+    onChange={(event) =>
+      setUsername(event.target.value)
+    }
+    placeholder="Enter admin username"
+    autoComplete="username"
+    className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+  />
+</label>
+<label className="block space-y-2 text-sm font-medium text-[#17251d]">
+  <span>Password</span>
+
+  <input
+    type="password"
+    value={password}
+    onChange={(event) =>
+      setPassword(event.target.value)
+    }
+    placeholder="Enter admin password"
+    autoComplete="current-password"
+    className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+  />
+</label>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <button
-              type="submit"
-              className="inline-flex w-full items-center justify-center rounded-full bg-[#17251d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-500"
-            >
-              Enter admin panel
-            </button>
+  type="submit"
+  disabled={
+    isLoggingIn ||
+    !username.trim() ||
+    !password
+  }
+  className="inline-flex w-full items-center justify-center rounded-full bg-[#17251d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+>
+  {isLoggingIn
+    ? "Signing in..."
+    : "Enter admin panel"}
+</button>
           </form>
 
           <a
@@ -514,12 +568,25 @@ const deleteBatch = (batchId: string) => {
             </a>
 
             <button
-              type="button"
-              onClick={() => setIsAuthenticated(false)}
-              className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
-            >
-              Log out
-            </button>
+  type="button"
+  onClick={async () => {
+    try {
+      await fetch(
+        "/api/admin/logout",
+        {
+          method: "POST",
+        }
+      );
+    } finally {
+      setIsAuthenticated(false);
+      setUsername("");
+      setPassword("");
+    }
+  }}
+  className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
+>
+  Log out
+</button>
 
             <button
               type="button"
