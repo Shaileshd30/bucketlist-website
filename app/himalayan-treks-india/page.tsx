@@ -1159,7 +1159,7 @@ export default async function HimalayanTreksPage() {
               </a>
 
               <Link
-                href="/trips"
+                href="/himalayan-treks-india"
                 className="rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-semibold transition hover:bg-white hover:text-[#17251d]"
               >
                 View All Trips
