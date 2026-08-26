@@ -2790,17 +2790,26 @@ export default function Home() {
       </p>
 
       <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <a href="#" className="transition hover:text-white">
-          Privacy Policy
-        </a>
+        <a
+  href="/privacy-policy"
+  className="transition hover:text-white"
+>
+  Privacy Policy
+</a>
 
-        <a href="#" className="transition hover:text-white">
-          Terms & Conditions
-        </a>
+<a
+  href="/terms-and-conditions"
+  className="transition hover:text-white"
+>
+  Terms & Conditions
+</a>
 
-        <a href="#" className="transition hover:text-white">
-          Cancellation Policy
-        </a>
+<a
+  href="/cancellation-policy"
+  className="transition hover:text-white"
+>
+  Cancellation & Refund Policy
+</a>
       </div>
     </div>
 
