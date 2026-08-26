@@ -156,6 +156,92 @@ const displayAvailableSeats = displayBatch
     (availableSeats > 0 && travelerCount <= availableSeats);
 
   /*
+   * SEO-friendly traveller FAQs.
+   *
+   * These are generated only from information already available
+   * for the trip, so the answers stay accurate for every trip
+   * without adding a separate FAQ field to Supabase yet.
+   */
+  const faqs = useMemo(() => {
+    const items: Array<{
+      question: string;
+      answer: string;
+    }> = [];
+
+    if (trip.difficulty) {
+      items.push({
+        question: `What is the difficulty level of ${trip.title}?`,
+        answer: `${trip.title} is currently listed as ${trip.difficulty}. Travelers should review the itinerary, terrain and medical guidance before booking.`,
+      });
+    }
+
+    if (displayDuration) {
+      items.push({
+        question: `How long is ${trip.title}?`,
+        answer: `${trip.title} has a planned duration of ${displayDuration}. Please check the itinerary on this page for the detailed trip flow.`,
+      });
+    }
+
+    if (trip.startPoint) {
+      items.push({
+        question: `Where does ${trip.title} start from?`,
+        answer: `${trip.title} starts from ${trip.startPoint}. Any available pickup points and reporting instructions are listed on this page and shared with confirmed participants.`,
+      });
+    }
+
+    if (displayBatch) {
+      items.push({
+        question: `When is the next departure for ${trip.title}?`,
+        answer: `The next currently available departure shown on this page is ${formatDate(
+          displayBatch.departureDate
+        )}. Departure availability can change as seats are booked.`,
+      });
+    }
+
+    if (currentPrice) {
+      items.push({
+        question: `What is the price of ${trip.title}?`,
+        answer: `The currently displayed price starts from ${formatPrice(
+          currentPrice
+        )} per person. Select an available departure to see the applicable batch price and booking details.`,
+      });
+    }
+
+    if (includes.length > 0) {
+      items.push({
+        question: `What is included in ${trip.title}?`,
+        answer: `The trip currently includes ${includes
+          .slice(0, 5)
+          .join(
+            ", "
+          )}${includes.length > 5 ? ", and other inclusions listed on this page" : ""}. Please review the complete Included section before booking.`,
+      });
+    }
+
+    if (thingsToCarry.length > 0) {
+      items.push({
+        question: `What should I carry for ${trip.title}?`,
+        answer: `Recommended items include ${thingsToCarry
+          .slice(0, 5)
+          .join(
+            ", "
+          )}${thingsToCarry.length > 5 ? ", along with the remaining items listed in the Things to Carry section" : ""}.`,
+      });
+    }
+
+    return items.slice(0, 6);
+  }, [
+    currentPrice,
+    displayBatch,
+    displayDuration,
+    includes,
+    thingsToCarry,
+    trip.difficulty,
+    trip.startPoint,
+    trip.title,
+  ]);
+
+  /*
    * WhatsApp enquiry
    */
   const submitBooking = (event: React.FormEvent) => {
@@ -896,6 +982,75 @@ const displayAvailableSeats = displayBatch
             </div>
           </div>
         </div>
+
+        {/* TRIP FAQS */}
+        {faqs.length > 0 && (
+          <section
+            aria-labelledby="trip-faq-heading"
+            className="mt-16 overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.04)]"
+          >
+            <div className="grid gap-8 border-b border-black/10 p-8 lg:grid-cols-[0.75fr_1.25fr] lg:p-10">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                  Good to know
+                </p>
+
+                <h2
+                  id="trip-faq-heading"
+                  className="mt-4 text-3xl font-bold tracking-tight text-[#17251d] sm:text-4xl"
+                >
+                  Frequently asked questions
+                </h2>
+
+                <p className="mt-4 max-w-md text-sm leading-7 text-[#5d6862]">
+                  Quick answers about {trip.title}, based on the current trip
+                  details, available departures and booking information.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {faqs.map((faq, index) => (
+                  <details
+                    key={`${faq.question}-${index}`}
+                    className="group rounded-[22px] border border-black/10 bg-[#f7f5f2] px-5 py-4"
+                  >
+                    <summary className="flex cursor-pointer list-none items-start justify-between gap-5 font-semibold text-[#17251d]">
+                      <span>{faq.question}</span>
+
+                      <span
+                        aria-hidden="true"
+                        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-lg leading-none text-[#17251d] transition group-open:rotate-45"
+                      >
+                        +
+                      </span>
+                    </summary>
+
+                    <p className="mt-4 border-t border-black/10 pt-4 text-sm leading-7 text-[#5d6862]">
+                      {faq.answer}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 bg-[#17251d] px-8 py-6 text-white sm:flex-row sm:items-center sm:justify-between lg:px-10">
+              <p className="text-sm leading-6 text-white/70">
+                Still have a question about this adventure?
+              </p>
+
+              <a
+                href={`https://wa.me/918482846287?text=${encodeURIComponent(
+                  `Hi Bucketlist Adventure, I have a question about ${trip.title}.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center rounded-full bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-400"
+              >
+                Ask us on WhatsApp ↗
+              </a>
+            </div>
+          </section>
+        )}
 
         {/* SIMILAR TRIPS */}
         <div className="mt-16">
