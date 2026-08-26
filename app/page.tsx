@@ -739,6 +739,102 @@ export default function Home() {
         </div>
       </section>
 
+      {/* TREKS NEAR PUNE - SEO LANDING PAGE LINK */}
+      <section className="relative overflow-hidden bg-white px-6 py-16 sm:py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-[1400px]">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16">
+
+            {/* CONTENT */}
+            <div>
+              <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
+                Weekend Adventures
+              </p>
+
+              <h2 className="max-w-3xl text-4xl font-bold leading-[0.98] tracking-[-0.04em] text-[#17251d] sm:text-5xl lg:text-6xl">
+                Discover the best
+                <span className="block text-[#8a958e]">
+                  treks near Pune.
+                </span>
+              </h2>
+
+              <p className="mt-6 max-w-xl text-base leading-7 text-[#5d6862] sm:text-lg sm:leading-8">
+                Escape the city and explore Sahyadri forts, waterfalls,
+                forest trails and scenic mountain routes with thoughtfully
+                planned weekend treks from Pune.
+              </p>
+
+              <p className="mt-4 max-w-xl text-base leading-7 text-[#718078]">
+                Whether you are looking for an easy one-day trek, a monsoon
+                adventure or a challenging fort trail, discover curated
+                experiences with transport, trek leaders and on-ground
+                coordination taken care of.
+              </p>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <a
+                  href="/treks-near-pune"
+                  className="inline-flex items-center justify-center rounded-full bg-[#17251d] px-6 py-4 text-sm font-semibold text-white transition hover:bg-orange-500"
+                >
+                  Explore Treks Near Pune
+                  <span className="ml-3">↗</span>
+                </a>
+
+                <a
+                  href="/trips"
+                  className="inline-flex items-center justify-center rounded-full border border-[#17251d]/15 bg-white px-6 py-4 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
+                >
+                  View All Adventures
+                </a>
+              </div>
+            </div>
+
+            {/* VISUAL CARD */}
+            <a
+              href="/treks-near-pune"
+              className="group relative min-h-[400px] overflow-hidden rounded-[32px] bg-[#17251d] shadow-[0_28px_80px_rgba(0,0,0,0.12)] sm:min-h-[500px]"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center transition duration-700 group-hover:scale-105"
+                style={{
+                  backgroundImage:
+                    "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=85')",
+                }}
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-[#07150f]/90 via-[#07150f]/20 to-transparent" />
+
+              <div className="absolute left-5 top-5 sm:left-7 sm:top-7">
+                <span className="rounded-full border border-white/20 bg-black/20 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md">
+                  Pune • Sahyadris
+                </span>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-300">
+                  Explore locally
+                </p>
+
+                <h3 className="mt-3 max-w-lg text-3xl font-bold leading-tight text-white sm:text-4xl">
+                  Mountains closer than you think.
+                </h3>
+
+                <div className="mt-6 flex items-center justify-between border-t border-white/20 pt-5">
+                  <span className="text-sm font-semibold text-white">
+                    Find your next trek
+                  </span>
+
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-lg text-[#17251d] transition group-hover:bg-orange-400 group-hover:text-white">
+                    ↗
+                  </span>
+                </div>
+              </div>
+            </a>
+
+          </div>
+        </div>
+      </section>
+
+
       {/* DESTINATIONS */}
       <section
         id="destinations"
