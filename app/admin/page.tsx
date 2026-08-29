@@ -465,6 +465,50 @@ const deleteBatch = (batchId: string) => {
   };
 
   const saveTrip = async () => {
+    const validationErrors: string[] = [];
+    const overview = (trip.overview || trip.description || "").trim();
+
+    if (!trip.title?.trim() || trip.title.trim() === "New trip") validationErrors.push("Enter a proper trip title.");
+    if (!trip.category) validationErrors.push("Select a category.");
+    if (!trip.tripType) validationErrors.push("Select a trip type.");
+    if (!trip.subtitle?.trim() || trip.subtitle.trim() === "Add a compelling short description") validationErrors.push("Add a subtitle.");
+    if (!trip.difficulty?.trim()) validationErrors.push("Select the difficulty level.");
+    if (!trip.startPoint?.trim() || trip.startPoint.trim() === "Starting point") validationErrors.push("Enter the start point.");
+    if (!trip.durationDays || trip.durationDays < 1) validationErrors.push("Enter a valid trip duration.");
+    if (!trip.groupSize?.trim() || trip.groupSize.trim() === "Small group") validationErrors.push("Enter the group size.");
+    if (!trip.summary?.trim() || trip.summary.trim() === "Write a short overview for this trip.") validationErrors.push("Add a trip summary.");
+    if (!overview || overview === "Describe the experience, route, and highlights for travelers here.") validationErrors.push("Add the trip overview.");
+    if (!trip.image?.trim()) validationErrors.push("Add a main trip image.");
+    if (!trip.itinerary?.length || trip.itinerary.includes("Add itinerary details here")) validationErrors.push("Add the trip itinerary.");
+    if (!trip.includes?.length || trip.includes.includes("Add inclusions here")) validationErrors.push("Add trip inclusions.");
+    if (!trip.notIncludes?.length || trip.notIncludes.includes("Add exclusions here")) validationErrors.push("Add trip exclusions.");
+
+    (trip.batches || []).forEach((batch, index) => {
+      const needsValidation = batch.visibility === "PUBLIC" || batch.status === "OPEN" || batch.bookingEnabled;
+      if (!needsValidation) return;
+      const label = `Departure ${index + 1}`;
+      if (!batch.departureDate) validationErrors.push(`${label}: select a departure date.`);
+      if (!batch.returnDate) validationErrors.push(`${label}: select a return date.`);
+      if (batch.departureDate && batch.returnDate && batch.returnDate < batch.departureDate) validationErrors.push(`${label}: return date cannot be before departure date.`);
+      if (!batch.price || batch.price <= 0) validationErrors.push(`${label}: enter a valid price.`);
+      if (!batch.totalSeats || batch.totalSeats < 1) validationErrors.push(`${label}: total seats must be at least 1.`);
+      if (batch.bookedSeats < 0 || batch.bookedSeats > batch.totalSeats) validationErrors.push(`${label}: booked seats are invalid.`);
+      if (batch.paymentMode === "ADVANCE" && (!batch.advanceAmount || batch.advanceAmount <= 0 || batch.advanceAmount > batch.price)) {
+        validationErrors.push(`${label}: enter a valid advance amount.`);
+      }
+    });
+
+    if (trip.tripType === "Fixed Departure" && trip.upcoming && (trip.batches || []).length === 0) {
+      validationErrors.push("Add at least one departure before showing this fixed-departure trip in Upcoming Adventures.");
+    }
+
+    if (validationErrors.length) {
+      setError(validationErrors[0]);
+      setStatus({ type: "error", message: `${validationErrors.length} item${validationErrors.length === 1 ? "" : "s"} need attention before saving.` });
+      window.alert(`Please complete the following before saving:\n\n${validationErrors.map((item) => `• ${item}`).join("\n")}`);
+      return;
+    }
+
     const response = await fetch("/api/trips", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
