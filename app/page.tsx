@@ -48,6 +48,12 @@ export default function Home() {
   const [googleReviewsLoading, setGoogleReviewsLoading] =
     useState(true);
 
+  const [heroVideoReady, setHeroVideoReady] =
+    useState(false);
+
+  const [heroVideoFailed, setHeroVideoFailed] =
+    useState(false);
+
   const getLowestActivePrice = (
     tripList: TripData[]
   ) => {
@@ -225,19 +231,69 @@ export default function Home() {
     <main className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
 
       {/* PREMIUM CINEMATIC VIDEO HERO */}
-<section className="relative min-h-[100svh] overflow-hidden bg-[#0b1510] text-white">
+<section
+  className="relative min-h-[100svh] overflow-hidden bg-[#0b1510] text-white"
+  style={{
+    position: "relative",
+    minHeight: "100svh",
+    overflow: "hidden",
+    backgroundColor: "#0b1510",
+    color: "white",
+  }}
+>
+
+  {/*
+   * Stable hero fallback.
+   *
+   * This image is visible immediately while the video is loading and remains
+   * visible if the browser cannot play the video. Critical positioning is also
+   * duplicated with inline styles so a delayed stylesheet cannot make the
+   * media expand into the page.
+   */}
+  <div
+    aria-hidden="true"
+    className="absolute inset-0 bg-cover bg-center"
+    style={{
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      backgroundImage: "url('/images/about/about-expedition.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }}
+  />
 
   {/* Background video */}
-  <video
-    className="absolute inset-0 h-full w-full object-cover"
-    autoPlay
-    muted
-    loop
-    playsInline
-    preload="metadata"
-  >
-    <source src="/videos/hero-adventure.mp4" type="video/mp4" />
-  </video>
+  {!heroVideoFailed && (
+    <video
+      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+        heroVideoReady ? "opacity-100" : "opacity-0"
+      }`}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        opacity: heroVideoReady ? 1 : 0,
+      }}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      poster="/images/about/about-expedition.jpg"
+      onLoadedData={() => setHeroVideoReady(true)}
+      onCanPlay={() => setHeroVideoReady(true)}
+      onError={() => {
+        setHeroVideoReady(false);
+        setHeroVideoFailed(true);
+      }}
+    >
+      <source src="/videos/hero-adventure.mp4" type="video/mp4" />
+    </video>
+  )}
 
   {/* Cinematic overlays */}
   <div className="absolute inset-0 bg-black/10" />
