@@ -155,8 +155,61 @@ function mapTrip(
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const slug = url.searchParams.get("slug")?.trim() || "";
+
+    if (slug) {
+      const tripResult = await supabaseAdmin
+        .from("trips")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (tripResult.error) {
+        throw tripResult.error;
+      }
+
+      if (!tripResult.data) {
+        return Response.json(
+          { error: "Trip not found." },
+          {
+            status: 404,
+            headers: {
+              "Cache-Control":
+                "no-store, no-cache, must-revalidate, max-age=0",
+            },
+          }
+        );
+      }
+
+      const tripRow = tripResult.data as TripRow;
+
+      const batchesResult = await supabaseAdmin
+        .from("trip_batches")
+        .select("*")
+        .eq("trip_id", tripRow.id)
+        .order("departure_date", {
+          ascending: true,
+        });
+
+      if (batchesResult.error) {
+        throw batchesResult.error;
+      }
+
+      const batches = ((batchesResult.data || []) as BatchRow[]).map(mapBatch);
+
+      return Response.json(
+        mapTrip(tripRow, batches),
+        {
+          headers: {
+            "Cache-Control":
+              "no-store, no-cache, must-revalidate, max-age=0",
+          },
+        }
+      );
+    }
     const [
       tripsResult,
       batchesResult,

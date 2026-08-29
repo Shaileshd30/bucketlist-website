@@ -106,6 +106,8 @@ export default function BookingPageClient() {
   const travelersFromUrl = searchParams.get("travelers") || "1";
 
   const [trips, setTrips] = useState<TripData[]>(defaultTrips);
+  const [isLoadingBookingDetails, setIsLoadingBookingDetails] = useState(true);
+  const [bookingDetailsLoadFailed, setBookingDetailsLoadFailed] = useState(false);
 
   const [travelerCount, setTravelerCount] = useState(
     Math.max(1, Number.parseInt(travelersFromUrl, 10) || 1)
@@ -137,28 +139,60 @@ export default function BookingPageClient() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   useEffect(() => {
-    const loadTrips = async () => {
+    let cancelled = false;
+
+    const loadBookingTrip = async () => {
+      setIsLoadingBookingDetails(true);
+      setBookingDetailsLoadFailed(false);
+
+      if (!tripSlug) {
+        setIsLoadingBookingDetails(false);
+        return;
+      }
+
       try {
-        const response = await fetch("/api/trips", {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/trips?slug=${encodeURIComponent(tripSlug)}`,
+          {
+            cache: "no-store",
+          }
+        );
 
         if (!response.ok) {
+          if (!cancelled) {
+            setBookingDetailsLoadFailed(true);
+          }
           return;
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as TripData;
 
-        if (Array.isArray(data) && data.length > 0) {
-          setTrips(data);
+        if (!cancelled && data?.slug === tripSlug) {
+          setTrips((current) => {
+            const withoutCurrentTrip = current.filter(
+              (item) => item.slug !== tripSlug
+            );
+
+            return [...withoutCurrentTrip, data];
+          });
         }
       } catch {
-        // Fall back to defaultTrips.
+        if (!cancelled) {
+          setBookingDetailsLoadFailed(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingBookingDetails(false);
+        }
       }
     };
 
-    loadTrips();
-  }, []);
+    void loadBookingTrip();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tripSlug]);
 
   useEffect(() => {
     void loadRazorpayScript();
@@ -538,7 +572,26 @@ export default function BookingPageClient() {
     }
   };
 
-  if (!trip || !batch) {
+  if (isLoadingBookingDetails) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee] px-6 py-16 text-[#17251d]">
+        <div className="w-full max-w-xl rounded-[28px] border border-black/10 bg-white p-8 text-center shadow-[0_24px_60px_rgba(0,0,0,0.06)]">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#17251d]/15 border-t-orange-500" />
+          <p className="mt-6 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+            Booking
+          </p>
+          <h1 className="mt-3 text-3xl font-bold">
+            Preparing your booking...
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-[#5d6862]">
+            Checking the latest departure, price and seat availability.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!trip || !batch || bookingDetailsLoadFailed) {
     return (
       <main className="min-h-screen bg-[#f5f3ee] px-6 py-16 text-[#17251d]">
         <div className="mx-auto max-w-xl rounded-[28px] border border-black/10 bg-white p-8 text-center shadow-[0_24px_60px_rgba(0,0,0,0.06)]">
@@ -557,7 +610,7 @@ export default function BookingPageClient() {
 
           <Link
             href="/trips"
-            className="mt-6 inline-flex rounded-full bg-[#17251d] px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-500"
+            className="mt-6 inline-flex rounded-full bg-[#17251d] px-6 py-3 text-sm font-semibold transition hover:bg-[#17251d] hover:text-white"
           >
             View trips
           </Link>
