@@ -820,6 +820,89 @@ const deleteBatch = (batchId: string) => {
                 Choose where this trip should appear on the public Trips page.
               </p>
             </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Trip type</span>
+              <select
+                value={trip.tripType}
+                onChange={(event) => updateField("tripType", event.target.value)}
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              >
+                <option value="Fixed Departure">Fixed Departure</option>
+                <option value="Custom Trip">Custom Trip</option>
+                <option value="Corporate">Corporate</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
+              <span>Subtitle</span>
+              <input
+                type="text"
+                value={trip.subtitle || ""}
+                onChange={(event) => updateField("subtitle", event.target.value)}
+                placeholder="A short line describing the experience"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Difficulty</span>
+              <select
+                value={trip.difficulty || ""}
+                onChange={(event) => updateField("difficulty", event.target.value)}
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              >
+                <option value="">Select difficulty</option>
+                <option value="Easy">Easy</option>
+                <option value="Easy to Moderate">Easy to Moderate</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Moderate to Difficult">Moderate to Difficult</option>
+                <option value="Difficult">Difficult</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Start point</span>
+              <input
+                type="text"
+                value={trip.startPoint || ""}
+                onChange={(event) => updateField("startPoint", event.target.value)}
+                placeholder="Example: Pune"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Duration (days)</span>
+              <input
+                type="number"
+                min="1"
+                value={trip.durationDays || 1}
+                onChange={(event) => {
+                  setStatus(null);
+                  setSiteSynced(false);
+                  setTrips((current) =>
+                    current.map((item) =>
+                      item.slug === selectedSlug
+                        ? { ...item, durationDays: Math.max(1, Number(event.target.value) || 1) }
+                        : item
+                    )
+                  );
+                }}
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Group size</span>
+              <input
+                type="text"
+                value={trip.groupSize || ""}
+                onChange={(event) => updateField("groupSize", event.target.value)}
+                placeholder="Example: Maximum 40 participants"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+            </label>
           </div>
 
           <div className="mt-8 rounded-[28px] border border-black/10 bg-[#f7f5f2] p-5 lg:p-6">
