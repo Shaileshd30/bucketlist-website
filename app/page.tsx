@@ -104,7 +104,7 @@ export default function Home() {
     const loadFeatured = async () => {
       try {
         const response = await fetch(
-          "/api/trips",
+          "/api/trips?summary=1",
           {
             cache: "no-store",
           }

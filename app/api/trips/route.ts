@@ -159,6 +159,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const slug = url.searchParams.get("slug")?.trim() || "";
+    const summaryOnly = url.searchParams.get("summary") === "1";
 
     if (slug) {
       const tripResult = await supabaseAdmin
@@ -210,6 +211,58 @@ export async function GET(request: Request) {
         }
       );
     }
+    if (summaryOnly) {
+      const [tripsResult, batchesResult] = await Promise.all([
+        supabaseAdmin
+          .from("trips")
+          .select(
+            "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
+          )
+          .order("created_at", {
+            ascending: true,
+          }),
+
+        supabaseAdmin
+          .from("trip_batches")
+          .select(
+            "id,trip_id,departure_date,return_date,price,total_seats,booked_seats,payment_mode,advance_amount,balance_due_date,status,visibility,booking_enabled"
+          )
+          .order("departure_date", {
+            ascending: true,
+          }),
+      ]);
+
+      if (tripsResult.error) {
+        throw tripsResult.error;
+      }
+
+      if (batchesResult.error) {
+        throw batchesResult.error;
+      }
+
+      const tripRows = (tripsResult.data || []) as TripRow[];
+      const batchRows = (batchesResult.data || []) as BatchRow[];
+
+      const batchesByTrip = new Map<string, TripBatch[]>();
+
+      for (const row of batchRows) {
+        const existing = batchesByTrip.get(row.trip_id) || [];
+        existing.push(mapBatch(row));
+        batchesByTrip.set(row.trip_id, existing);
+      }
+
+      const trips = tripRows.map((row) =>
+        mapTrip(row, batchesByTrip.get(row.id) || [])
+      );
+
+      return Response.json(trips, {
+        headers: {
+          "Cache-Control":
+            "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      });
+    }
+
     const [
       tripsResult,
       batchesResult,
