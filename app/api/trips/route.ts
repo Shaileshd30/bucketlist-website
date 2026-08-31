@@ -125,9 +125,7 @@ function mapTrip(
       safePublicImage(row.image),
 
     gallery:
-      (row.gallery || []).filter(
-        (image) => !image.startsWith("data:image")
-      ),
+      sanitizeGallery(row.gallery),
 
     itinerary:
       row.itinerary || [],
@@ -158,14 +156,24 @@ function mapTrip(
 }
 
 
-function safePublicImage(value: string | null | undefined) {
-  const image = value || "";
+function isDataUrl(value: string | null | undefined) {
+  return (value || "").trim().toLowerCase().startsWith("data:");
+}
 
-  if (image.startsWith("data:image")) {
+function safePublicImage(value: string | null | undefined) {
+  const image = (value || "").trim();
+
+  if (isDataUrl(image)) {
     return "";
   }
 
   return image;
+}
+
+function sanitizeGallery(values: string[] | null | undefined) {
+  return (values || [])
+    .map((value) => (value || "").trim())
+    .filter((value) => value && !isDataUrl(value));
 }
 
 export async function GET(request: Request) {
@@ -230,7 +238,7 @@ export async function GET(request: Request) {
         supabaseAdmin
           .from("trips")
           .select(
-            "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
+            "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,featured"
           )
           .eq("archived", false)
           .order("created_at", {
@@ -280,7 +288,7 @@ export async function GET(request: Request) {
         startPoint: row.start_point || "",
         durationDays: row.duration_days || undefined,
         groupSize: row.group_size || undefined,
-        image: safePublicImage(row.image),
+        image: "",
         featured: row.featured || false,
         batches: batchesByTrip.get(row.id) || [],
       }));
@@ -429,8 +437,8 @@ async function saveSingleTrip(trip: TripData) {
     group_size: trip.groupSize || null,
     description: trip.description || null,
     overview: trip.overview || null,
-    image: trip.image || "",
-    gallery: trip.gallery || [],
+    image: safePublicImage(trip.image),
+    gallery: sanitizeGallery(trip.gallery),
     itinerary: trip.itinerary || [],
     includes: trip.includes || [],
     not_includes: trip.notIncludes || [],
