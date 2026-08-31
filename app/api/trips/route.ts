@@ -122,10 +122,12 @@ function mapTrip(
       row.overview || undefined,
 
     image:
-      row.image || "",
+      safePublicImage(row.image),
 
     gallery:
-      row.gallery || [],
+      (row.gallery || []).filter(
+        (image) => !image.startsWith("data:image")
+      ),
 
     itinerary:
       row.itinerary || [],
@@ -155,6 +157,17 @@ function mapTrip(
   };
 }
 
+
+function safePublicImage(value: string | null | undefined) {
+  const image = value || "";
+
+  if (image.startsWith("data:image")) {
+    return "";
+  }
+
+  return image;
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -166,6 +179,7 @@ export async function GET(request: Request) {
         .from("trips")
         .select("*")
         .eq("slug", slug)
+        .eq("archived", false)
         .maybeSingle();
 
       if (tripResult.error) {
@@ -218,6 +232,7 @@ export async function GET(request: Request) {
           .select(
             "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
           )
+          .eq("archived", false)
           .order("created_at", {
             ascending: true,
           }),
@@ -265,7 +280,7 @@ export async function GET(request: Request) {
         startPoint: row.start_point || "",
         durationDays: row.duration_days || undefined,
         groupSize: row.group_size || undefined,
-        image: row.image || "",
+        image: safePublicImage(row.image),
         featured: row.featured || false,
         batches: batchesByTrip.get(row.id) || [],
       }));
@@ -285,6 +300,7 @@ export async function GET(request: Request) {
       supabaseAdmin
         .from("trips")
         .select("*")
+        .eq("archived", false)
         .order("created_at", {
           ascending: true,
         }),
@@ -368,6 +384,136 @@ export async function GET(request: Request) {
   }
 }
 
+
+type SupabaseLikeError = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function getErrorDetails(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      code: undefined as string | undefined,
+      details: undefined as string | undefined,
+      hint: undefined as string | undefined,
+    };
+  }
+
+  const value = (error || {}) as SupabaseLikeError;
+
+  return {
+    message: value.message || "Unexpected database error.",
+    code: value.code,
+    details: value.details,
+    hint: value.hint,
+  };
+}
+
+async function saveSingleTrip(trip: TripData) {
+  const tripRow = {
+    id: trip.id,
+    slug: trip.slug,
+    title: trip.title,
+    trip_type: trip.tripType || null,
+    category: trip.category,
+    highlight: trip.highlight || null,
+    subtitle: trip.subtitle || "",
+    summary: trip.summary || "",
+    cta: trip.cta || "Book Now",
+    difficulty: trip.difficulty || "",
+    start_point: trip.startPoint || "",
+    duration_days: trip.durationDays || null,
+    group_size: trip.groupSize || null,
+    description: trip.description || null,
+    overview: trip.overview || null,
+    image: trip.image || "",
+    gallery: trip.gallery || [],
+    itinerary: trip.itinerary || [],
+    includes: trip.includes || [],
+    not_includes: trip.notIncludes || [],
+    pickup_points: trip.pickupPoints || [],
+    things_to_carry: trip.thingsToCarry || [],
+    medical_disclaimer: trip.medicalDisclaimer || [],
+    rules: trip.rules || [],
+    featured: trip.featured || false,
+    archived: false,
+  };
+
+  const { error: tripUpsertError } = await supabaseAdmin
+    .from("trips")
+    .upsert(tripRow, {
+      onConflict: "id",
+    });
+
+  if (tripUpsertError) {
+    throw tripUpsertError;
+  }
+
+  const batchRows = (trip.batches || []).map((batch) => ({
+    id: batch.id,
+    trip_id: trip.id,
+    departure_date: batch.departureDate,
+    return_date: batch.returnDate,
+    price: batch.price,
+    total_seats: batch.totalSeats,
+    booked_seats: batch.bookedSeats || 0,
+    payment_mode: batch.paymentMode,
+    advance_amount: batch.advanceAmount || 0,
+    balance_due_date: batch.balanceDueDate || null,
+    status: batch.status,
+    visibility: batch.visibility,
+    booking_enabled: batch.bookingEnabled,
+  }));
+
+  if (batchRows.length > 0) {
+    const { error: batchUpsertError } = await supabaseAdmin
+      .from("trip_batches")
+      .upsert(batchRows, {
+        onConflict: "id",
+      });
+
+    if (batchUpsertError) {
+      throw batchUpsertError;
+    }
+  }
+
+  // Delete only departures removed from THIS trip.
+  const incomingBatchIds = new Set(batchRows.map((batch) => batch.id));
+
+  const { data: existingBatches, error: existingBatchesError } =
+    await supabaseAdmin
+      .from("trip_batches")
+      .select("id")
+      .eq("trip_id", trip.id);
+
+  if (existingBatchesError) {
+    throw existingBatchesError;
+  }
+
+  const batchIdsToDelete = (existingBatches || [])
+    .map((row) => row.id as string)
+    .filter((id) => !incomingBatchIds.has(id));
+
+  if (batchIdsToDelete.length > 0) {
+    const { error: deleteBatchesError } = await supabaseAdmin
+      .from("trip_batches")
+      .delete()
+      .in("id", batchIdsToDelete);
+
+    if (deleteBatchesError) {
+      throw deleteBatchesError;
+    }
+  }
+
+  return {
+    tripsSaved: 1,
+    batchesSaved: batchRows.length,
+  };
+}
+
 export async function PUT(request: Request) {
   const authError = await requireAdmin();
 
@@ -376,318 +522,126 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const body =
-      (await request.json()) as TripData[];
+    const body = (await request.json()) as TripData | TripData[];
 
-    if (!Array.isArray(body)) {
-      return Response.json(
-        {
-          error:
-            "Trip data must be an array.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-     * ---------------------------------
-     * 1. UPSERT TRIPS
-     * ---------------------------------
-     */
-    const tripRows =
-      body.map((trip) => ({
-        id: trip.id,
-        slug: trip.slug,
-        title: trip.title,
-
-        trip_type:
-          trip.tripType || null,
-
-        category:
-          trip.category,
-
-        highlight:
-          trip.highlight || null,
-
-        subtitle:
-          trip.subtitle || "",
-
-        summary:
-          trip.summary || "",
-
-        cta:
-          trip.cta || "Book Now",
-
-        difficulty:
-          trip.difficulty || "",
-
-        start_point:
-          trip.startPoint || "",
-
-        duration_days:
-          trip.durationDays || null,
-
-        group_size:
-          trip.groupSize || null,
-
-        description:
-          trip.description || null,
-
-        overview:
-          trip.overview || null,
-
-        image:
-          trip.image || "",
-
-        gallery:
-          trip.gallery || [],
-
-        itinerary:
-          trip.itinerary || [],
-
-        includes:
-          trip.includes || [],
-
-        not_includes:
-          trip.notIncludes || [],
-
-        pickup_points:
-          trip.pickupPoints || [],
-
-        things_to_carry:
-          trip.thingsToCarry || [],
-
-        medical_disclaimer:
-          trip.medicalDisclaimer || [],
-
-        rules:
-          trip.rules || [],
-
-        featured:
-          trip.featured || false,
-      }));
-
-    const {
-      error: tripUpsertError,
-    } = await supabaseAdmin
-      .from("trips")
-      .upsert(
-        tripRows,
-        {
-          onConflict: "id",
-        }
-      );
-
-    if (tripUpsertError) {
-      throw tripUpsertError;
-    }
-
-    /*
-     * ---------------------------------
-     * 2. UPSERT BATCHES
-     * ---------------------------------
-     */
-    const batchRows =
-      body.flatMap((trip) =>
-        (trip.batches || []).map(
-          (batch) => ({
-            id: batch.id,
-
-            trip_id:
-              trip.id,
-
-            departure_date:
-              batch.departureDate,
-
-            return_date:
-              batch.returnDate,
-
-            price:
-              batch.price,
-
-            total_seats:
-              batch.totalSeats,
-
-            booked_seats:
-              batch.bookedSeats || 0,
-
-            payment_mode:
-              batch.paymentMode,
-
-            advance_amount:
-              batch.advanceAmount || 0,
-
-            balance_due_date:
-              batch.balanceDueDate || null,
-
-            status:
-              batch.status,
-
-            visibility:
-              batch.visibility,
-
-            booking_enabled:
-              batch.bookingEnabled,
-          })
-        )
-      );
-
-    if (batchRows.length > 0) {
-      const {
-        error: batchUpsertError,
-      } = await supabaseAdmin
-        .from("trip_batches")
-        .upsert(
-          batchRows,
-          {
-            onConflict: "id",
-          }
-        );
-
-      if (batchUpsertError) {
-        throw batchUpsertError;
+    // Backward compatibility only. New Admin sends exactly one trip.
+    if (Array.isArray(body)) {
+      for (const trip of body) {
+        await saveSingleTrip(trip);
       }
-    }
 
-    /*
-     * ---------------------------------
-     * 3. DELETE REMOVED BATCHES
-     * ---------------------------------
-     *
-     * If you delete a departure from Admin,
-     * remove it from Supabase too.
-     */
-    const incomingBatchIds =
-      new Set(
-        batchRows.map(
-          (batch) => batch.id
-        )
-      );
-
-    const {
-      data: existingBatches,
-      error:
-        existingBatchesError,
-    } = await supabaseAdmin
-      .from("trip_batches")
-      .select("id");
-
-    if (existingBatchesError) {
-      throw existingBatchesError;
-    }
-
-    const batchIdsToDelete =
-      (existingBatches || [])
-        .map((row) => row.id as string)
-        .filter(
-          (id) =>
-            !incomingBatchIds.has(id)
-        );
-
-    if (
-      batchIdsToDelete.length > 0
-    ) {
-      const {
-        error:
-          deleteBatchesError,
-      } = await supabaseAdmin
-        .from("trip_batches")
-        .delete()
-        .in(
-          "id",
-          batchIdsToDelete
-        );
-
-      if (deleteBatchesError) {
-        throw deleteBatchesError;
-      }
-    }
-
-    /*
-     * ---------------------------------
-     * 4. DELETE REMOVED TRIPS
-     * ---------------------------------
-     */
-    const incomingTripIds =
-      new Set(
-        body.map(
-          (trip) => trip.id
-        )
-      );
-
-    const {
-      data: existingTrips,
-      error:
-        existingTripsError,
-    } = await supabaseAdmin
-      .from("trips")
-      .select("id");
-
-    if (existingTripsError) {
-      throw existingTripsError;
-    }
-
-    const tripIdsToDelete =
-      (existingTrips || [])
-        .map((row) => row.id as string)
-        .filter(
-          (id) =>
-            !incomingTripIds.has(id)
-        );
-
-    if (
-      tripIdsToDelete.length > 0
-    ) {
-      const {
-        error:
-          deleteTripsError,
-      } = await supabaseAdmin
-        .from("trips")
-        .delete()
-        .in(
-          "id",
-          tripIdsToDelete
-        );
-
-      if (deleteTripsError) {
-        throw deleteTripsError;
-      }
-    }
-
-    return Response.json(
-      {
+      return Response.json({
         ok: true,
-        tripsSaved:
-          body.length,
+        tripsSaved: body.length,
+        mode: "legacy-array",
+      });
+    }
 
-        batchesSaved:
-          batchRows.length,
-      },
-      {
-        headers: {
-          "Cache-Control":
-            "no-store, no-cache, must-revalidate, max-age=0",
-        },
-      }
-    );
+    if (!body || typeof body !== "object" || !body.id || !body.slug) {
+      return Response.json(
+        { error: "A valid trip object is required." },
+        { status: 400 }
+      );
+    }
+
+    const result = await saveSingleTrip(body);
+
+    return Response.json({
+      ok: true,
+      ...result,
+    });
   } catch (error) {
-    console.error(
-      "PUT /api/trips failed:",
-      error
-    );
+    console.error("PUT /api/trips failed:", error);
+
+    const details = getErrorDetails(error);
 
     return Response.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to save trip data.",
+        error: details.message,
+        code: details.code,
+        details: details.details,
+        hint: details.hint,
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const authError = await requireAdmin();
+
+  if (authError) {
+    return authError;
+  }
+
+  try {
+    const url = new URL(request.url);
+    const tripId = url.searchParams.get("id")?.trim() || "";
+
+    if (!tripId) {
+      return Response.json(
+        { error: "Trip id is required." },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * Permanent admin behavior: soft-delete instead of physically deleting.
+     * This preserves bookings/payments/history and avoids foreign-key failures.
+     */
+    const { error: hideBatchesError } = await supabaseAdmin
+      .from("trip_batches")
+      .update({
+        status: "CLOSED",
+        visibility: "HIDDEN",
+        booking_enabled: false,
+      })
+      .eq("trip_id", tripId);
+
+    if (hideBatchesError) {
+      throw hideBatchesError;
+    }
+
+    const { data: archivedTrip, error: archiveTripError } =
+      await supabaseAdmin
+        .from("trips")
+        .update({
+          archived: true,
+          featured: false,
+        })
+        .eq("id", tripId)
+        .select("id")
+        .maybeSingle();
+
+    if (archiveTripError) {
+      throw archiveTripError;
+    }
+
+    if (!archivedTrip) {
+      return Response.json(
+        { error: "Trip not found." },
+        { status: 404 }
+      );
+    }
+
+    return Response.json({
+      ok: true,
+      deletedTripId: tripId,
+      archived: true,
+    });
+  } catch (error) {
+    console.error("DELETE /api/trips failed:", error);
+
+    const details = getErrorDetails(error);
+
+    return Response.json(
       {
-        status: 500,
-      }
+        error: details.message,
+        code: details.code,
+        details: details.details,
+        hint: details.hint,
+      },
+      { status: 500 }
     );
   }
 }
