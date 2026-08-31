@@ -251,9 +251,24 @@ export async function GET(request: Request) {
         batchesByTrip.set(row.trip_id, existing);
       }
 
-      const trips = tripRows.map((row) =>
-        mapTrip(row, batchesByTrip.get(row.id) || [])
-      );
+      const trips = tripRows.map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        tripType: row.trip_type || undefined,
+        category: row.category,
+        highlight: row.highlight || undefined,
+        subtitle: row.subtitle || "",
+        summary: row.summary || "",
+        cta: row.cta || "Book Now",
+        difficulty: row.difficulty || "",
+        startPoint: row.start_point || "",
+        durationDays: row.duration_days || undefined,
+        groupSize: row.group_size || undefined,
+        image: row.image || "",
+        featured: row.featured || false,
+        batches: batchesByTrip.get(row.id) || [],
+      }));
 
       return Response.json(trips, {
         headers: {
