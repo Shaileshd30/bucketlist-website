@@ -19,13 +19,23 @@ const createSlug = (title: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
+const uploadTripImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/admin/images", {
+    method: "POST",
+    body: formData,
   });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.url) {
+    throw new Error(data?.error || "Image upload failed.");
+  }
+
+  return String(data.url);
+};
 
 export default function AdminPage() {
   const [trips, setTrips] = useState<TripData[]>(defaultTrips);
@@ -300,20 +310,20 @@ const deleteBatch = (batchId: string) => {
     if (!file) return;
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const imageUrl = await uploadTripImage(file);
       setSiteSynced(false);
       setTrips((current) =>
         current.map((item) =>
           item.slug === selectedSlug
             ? {
                 ...item,
-                image: dataUrl,
-                gallery: Array.from(new Set([dataUrl, ...(item.gallery || [])])),
+                image: imageUrl,
+                gallery: Array.from(new Set([imageUrl, ...(item.gallery || [])])),
               }
             : item
         )
       );
-      setStatus({ type: "success", message: "Main image uploaded and saved to this trip." });
+      setStatus({ type: "success", message: "Main image uploaded. Save changes to publish it." });
       setError("");
     } catch {
       setError("Could not upload the image. Please try another file.");
@@ -327,7 +337,7 @@ const deleteBatch = (batchId: string) => {
     if (!files.length) return;
 
     try {
-      const uploaded = await Promise.all(files.map((file) => readFileAsDataUrl(file)));
+      const uploaded = await Promise.all(files.map((file) => uploadTripImage(file)));
       setSiteSynced(false);
       setTrips((current) =>
         current.map((item) =>
