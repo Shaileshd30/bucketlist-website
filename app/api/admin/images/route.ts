@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase/server";
-import { requireAdmin } from "../../../lib/adminAuth";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
 
@@ -10,8 +10,15 @@ const BUCKET =
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 
 const extensionFor = (file: File) => {
-  const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (fromName && fromName.length <= 5) return fromName;
+  const fromName = file.name
+    .split(".")
+    .pop()
+    ?.toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  if (fromName && fromName.length <= 5) {
+    return fromName;
+  }
 
   const byType: Record<string, string> = {
     "image/jpeg": "jpg",
@@ -25,10 +32,13 @@ const extensionFor = (file: File) => {
 };
 
 export async function POST(request: NextRequest) {
-  try {
-    const authError = await requireAdmin();
-    if (authError) return authError;
+  const authError = await requireAdmin();
 
+  if (authError) {
+    return authError;
+  }
+
+  try {
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -69,7 +79,9 @@ export async function POST(request: NextRequest) {
       throw uploadError;
     }
 
-    const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(objectPath);
+    const { data } = supabaseAdmin.storage
+      .from(BUCKET)
+      .getPublicUrl(objectPath);
 
     if (!data?.publicUrl) {
       throw new Error("Supabase did not return a public image URL.");
