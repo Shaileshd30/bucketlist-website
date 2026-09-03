@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   defaultTrips,
-  tripCategories,
+  travelCategories,
   type TripData,
 } from "./data/trips";
 
@@ -54,6 +55,9 @@ export default function Home() {
   const [heroVideoFailed, setHeroVideoFailed] =
     useState(false);
 
+  const heroVideoRef =
+    useRef<HTMLVideoElement | null>(null);
+
   const getLowestActivePrice = (
     tripList: TripData[]
   ) => {
@@ -76,12 +80,12 @@ export default function Home() {
   };
 
   const getLowestCategoryPrice = (
-    category: TripData["category"]
+    category: NonNullable<TripData["travelCategory"]>
   ) => {
     return getLowestActivePrice(
       trips.filter(
         (trip) =>
-          trip.category === category
+          trip.travelCategory === category
       )
     );
   };
@@ -227,6 +231,136 @@ export default function Home() {
     );
   }, []);
 
+  /*
+   * Scroll-scrub masked typography.
+   * The imagery moves inside oversized words while the section stays pinned.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const section = document.querySelector<HTMLElement>(".scrollcraft-mask-section");
+    if (!section) return;
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    const scenes = gsap.utils.toArray<HTMLElement>(".scrollcraft-scene");
+
+    if (reduceMotion) {
+      scenes.forEach((scene, index) => {
+        gsap.set(scene, {
+          opacity: index === 0 ? 1 : 0,
+          visibility: index === 0 ? "visible" : "hidden",
+        });
+      });
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      scenes.forEach((scene, index) => {
+        gsap.set(scene, {
+          opacity: index === 0 ? 1 : 0,
+          visibility: index === 0 ? "visible" : "hidden",
+        });
+      });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: "+=320%",
+          pin: true,
+          scrub: 0.8,
+          anticipatePin: 1,
+        },
+      });
+
+      scenes.forEach((scene, index) => {
+        const media = scene.querySelector<HTMLElement>(".scrollcraft-media");
+        const word = scene.querySelector<HTMLElement>(".scrollcraft-word");
+        const copy = scene.querySelector<HTMLElement>(".scrollcraft-copy");
+
+        if (index > 0) {
+          tl.set(scene, { visibility: "visible" }, index)
+            .to(scene, { opacity: 1, duration: 0.18, ease: "none" }, index);
+        }
+
+        if (media) {
+          tl.fromTo(
+            media,
+            { scale: 1.16, xPercent: -3, yPercent: -3 },
+            { scale: 1.02, xPercent: 3, yPercent: 3, duration: 0.78, ease: "none" },
+            index
+          );
+        }
+
+        if (word) {
+          tl.fromTo(
+            word,
+            { scale: 0.94 },
+            { scale: 1, duration: 0.72, ease: "none" },
+            index
+          );
+        }
+
+        if (copy) {
+          tl.fromTo(
+            copy,
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.25, ease: "none" },
+            index + 0.08
+          ).to(
+            copy,
+            { y: -20, opacity: 0, duration: 0.18, ease: "none" },
+            index + 0.68
+          );
+        }
+
+        if (index < scenes.length - 1) {
+          tl.to(
+            scene,
+            { opacity: 0, duration: 0.18, ease: "none" },
+            index + 0.78
+          );
+        }
+      });
+    }, section);
+
+    ScrollTrigger.refresh();
+
+    return () => ctx.revert();
+  }, []);
+
+  /*
+   * Keep the cinematic hero reliable across Chrome, mobile emulation
+   * and production browsers. The media can be downloaded successfully
+   * while the visual state still remains on the poster if "loadedData"
+   * is not the event that fires first. We therefore also react to
+   * metadata/canplay/playing and explicitly ask the muted video to play.
+   */
+  useEffect(() => {
+    const video = heroVideoRef.current;
+
+    if (!video || heroVideoFailed) {
+      return;
+    }
+
+    video.muted = true;
+
+    const tryPlay = async () => {
+      try {
+        await video.play();
+      } catch {
+        // Keep the poster visible if autoplay is blocked.
+      }
+    };
+
+    tryPlay();
+  }, [heroVideoFailed]);
+
   return (
     <main className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
 
@@ -252,21 +386,29 @@ export default function Home() {
    */}
   <div
     aria-hidden="true"
-    className="absolute inset-0 bg-cover bg-center"
+    className="absolute inset-0"
     style={{
       position: "absolute",
       inset: 0,
       width: "100%",
       height: "100%",
-      backgroundImage: "url('/images/about/about-expedition.jpg')",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
     }}
-  />
+  >
+    <Image
+      src="/images/about/about-expedition.jpg"
+      alt=""
+      fill
+      priority
+      fetchPriority="high"
+      className="object-cover object-center"
+      sizes="100vw"
+    />
+  </div>
 
   {/* Background video */}
   {!heroVideoFailed && (
     <video
+      ref={heroVideoRef}
       className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
         heroVideoReady ? "opacity-100" : "opacity-0"
       }`}
@@ -284,8 +426,10 @@ export default function Home() {
       playsInline
       preload="metadata"
       poster="/images/about/about-expedition.jpg"
+      onLoadedMetadata={() => setHeroVideoReady(true)}
       onLoadedData={() => setHeroVideoReady(true)}
       onCanPlay={() => setHeroVideoReady(true)}
+      onPlaying={() => setHeroVideoReady(true)}
       onError={() => {
         setHeroVideoReady(false);
         setHeroVideoFailed(true);
@@ -760,7 +904,7 @@ export default function Home() {
 
           <div className="flex flex-col justify-center p-8 lg:p-10">
             <p className="mb-3 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
-              {featuredTrip.startPoint}
+              {featuredTrip.destination || featuredTrip.startPoint}
             </p>
             <h3 className="text-3xl font-bold tracking-tight sm:text-4xl">
               {featuredTrip.title}
@@ -904,149 +1048,113 @@ export default function Home() {
       </section>
 
 
-      {/* DESTINATIONS */}
+      {/* SCROLLCRAFT MASKED TRAVEL STORY */}
       <section
         id="destinations"
-        className="bg-[#17251d] px-6 py-16 text-white sm:py-20 lg:px-10 lg:py-32"
+        className="scrollcraft-mask-section relative h-[100svh] overflow-hidden bg-black text-white"
       >
-        <div className="mx-auto max-w-[1400px]">
-          <div className="mb-14 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-            <div>
-              <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-orange-400">
-                Explore
-              </p>
-
-              <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                Where will you go
-                <br />
-                <span className="text-white/40">next?</span>
-              </h2>
+        {[
+          {
+            word: "ALIVE",
+            eyebrow: "Treks & Adventures",
+            title: "Go where the road ends.",
+            description:
+              "Sahyadri trails, Himalayan treks and expeditions created for travellers who want to earn the view.",
+            category: "Treks & Adventures",
+            image:
+              "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+          },
+          {
+            word: "INDIA",
+            eyebrow: "Domestic Tours",
+            title: "Take the long road.",
+            description:
+              "Ladakh, Spiti, Kashmir, Kerala, Andaman, Mysuru and immersive journeys across India.",
+            category: "Domestic Tours",
+            image:
+              "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+          },
+          {
+            word: "BEYOND",
+            eyebrow: "International Tours",
+            title: "Make the world your next story.",
+            description:
+              "Curated journeys beyond borders, built around iconic places, local culture and seamless planning.",
+            category: "International Tours",
+            image:
+              "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+          },
+        ].map((scene, index) => (
+          <div
+            key={scene.word}
+            className="scrollcraft-scene absolute inset-0 flex items-center justify-center"
+            style={{ zIndex: index + 1 }}
+          >
+            {/* Full cinematic source image. The oversized word clips this image. */}
+            <div
+              className="scrollcraft-word absolute inset-0 flex items-center justify-center px-3 sm:px-6"
+              style={{
+                WebkitMaskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Ctext x='800' y='535' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-size='310' font-weight='900' letter-spacing='-18' fill='white'%3E${scene.word}%3C/text%3E%3C/svg%3E")`,
+                WebkitMaskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Ctext x='800' y='535' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-size='310' font-weight='900' letter-spacing='-18' fill='white'%3E${scene.word}%3C/text%3E%3C/svg%3E")`,
+                maskSize: "contain",
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+              }}
+            >
+              <img
+                src={scene.image}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                className="scrollcraft-media absolute inset-0 h-full w-full object-cover"
+              />
             </div>
 
-            <div className="flex flex-col gap-4 lg:items-end">
-              <p className="max-w-xl text-base leading-7 text-white/65">
-                From weekend escapes to Himalayan expeditions, discover journeys shaped by
-                terrain, story, and the kind of memories that stay with you long after the trail ends.
-              </p>
+            {/* Fine outline keeps the typography legible against black. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center px-4 text-center font-black uppercase leading-none tracking-[-0.055em] text-transparent"
+              style={{
+                fontSize: "clamp(4rem, 19.4vw, 18.6rem)",
+                WebkitTextStroke: "1px rgba(255,255,255,0.10)",
+              }}
+            >
+              {scene.word}
+            </div>
+
+            <div className="scrollcraft-copy absolute inset-x-0 bottom-8 z-20 mx-auto flex max-w-[1400px] flex-col gap-5 px-6 sm:bottom-10 sm:px-10 lg:bottom-12 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-orange-400 sm:text-xs">
+                  {String(index + 1).padStart(2, "0")} · {scene.eyebrow}
+                </p>
+                <h2 className="mt-3 text-2xl font-bold tracking-[-0.035em] sm:text-4xl lg:text-5xl">
+                  {scene.title}
+                </h2>
+                <p className="mt-3 max-w-xl text-xs leading-6 text-white/68 sm:text-sm sm:leading-7">
+                  {scene.description}
+                </p>
+              </div>
 
               <a
-                href="#adventures"
-                className="inline-flex w-fit items-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-orange-400 hover:bg-orange-500 hover:text-white"
+                href={`/trips?category=${encodeURIComponent(scene.category)}`}
+                className="inline-flex w-fit items-center rounded-full border border-white/20 bg-white px-5 py-3 text-xs font-bold text-[#17251d] transition hover:bg-orange-400 hover:text-white sm:px-6 sm:py-3.5 sm:text-sm"
               >
-                View all trips
-                <span className="ml-2 text-base">↗</span>
+                Explore {scene.eyebrow}
+                <span className="ml-3">↗</span>
               </a>
             </div>
+
+            <div className="pointer-events-none absolute left-6 top-7 z-20 text-[9px] font-bold uppercase tracking-[0.32em] text-white/35 sm:left-10 sm:top-10">
+              Scroll to explore
+            </div>
+
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-white/10" />
           </div>
-
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {tripCategories.map((category, index) => {
-              const categoryTrips = trips.filter((trip) => trip.category === category);
-              const categoryImage =
-                category === "Sahyadri"
-                  ? "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85"
-                  : category === "Himalayas"
-                    ? "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85"
-                    : "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1200&q=85";
-
-              const categoryMeta = {
-                Sahyadri: { region: "Western Ghats", vibe: "Weekend reset", description: "Cloud forests, fort trails, and waterfall escapes for short, memorable adventures." },
-                Himalayas: { region: "High altitude", vibe: "Expedition", description: "Big mountain routes, remote roads, and unforgettable Himalayan landscapes." },
-                Nepal: { region: "Everest horizon", vibe: "Classic trek", description: "Warm hospitality, scenic trails, and iconic Himalayan journeys shaped for discovery." },
-              }[category];
-
-              return (
-                <div
-                  key={category}
-                  className="group relative min-h-[420px] sm:min-h-[480px] overflow-hidden rounded-[28px] border border-white/10 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.18)] transition duration-500 hover:-translate-y-1 hover:border-orange-300/70"
-                >
-                  <img
-                    src={categoryImage}
-                    alt=""
-                    aria-hidden="true"
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority="low"
-                    className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-105"
-                  />
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#07150f]/90 via-[#07150f]/25 to-transparent" />
-
-                  <div className="absolute inset-x-0 top-0 flex items-center justify-between p-5">
-                    <span className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm">
-                      {categoryMeta.region}
-                    </span>
-
-                    <span className="text-[10px] uppercase tracking-[0.25em] text-orange-300">
-                      {categoryMeta.vibe}
-                    </span>
-                  </div>
-
-                  <div className="absolute inset-x-0 bottom-0 p-6 sm:p-7">
-                    <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.3em] text-white/60">
-                      {index === 0 ? "1–3 days" : index === 1 ? "4–9 days" : "7–12 days"}
-                    </p>
-
-                    <h3 className="text-3xl font-bold text-white sm:text-[2rem]">
-                      {category}
-                    </h3>
-
-                    <p className="mt-3 max-w-xs text-sm leading-6 text-white/75">
-                      {categoryMeta.description}
-                    </p>
-
-                    <div className="mt-5 rounded-2xl border border-white/15 bg-black/15 p-3 backdrop-blur-sm">
-                      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/60">
-                        Treks & trips
-                      </p>
-                      <ul className="space-y-1 text-sm text-white/85">
-                        {categoryTrips.slice(0, 3).map((trip) => (
-                          <li key={trip.slug}>
-                            <a
-                              href={`/trips/${trip.slug}`}
-                              className="flex items-center gap-2 transition hover:text-orange-300"
-                            >
-                              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                              <span>{trip.title}</span>
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="mt-5 flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.25em] text-orange-300">
-                          {categoryTrips.length} trips
-                        </p>
-                        <p className="mt-2 text-lg font-bold text-white">
-                          {(() => {
-  const price =
-    getLowestCategoryPrice(
-      category
-    );
-
-  return price
-    ? `From ${formatPrice(price)}`
-    : "Explore trips";
-})()}
-                        </p>
-                      </div>
-
-                      <a
-                        href="/trips"
-                        className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#17251d] transition group-hover:bg-orange-400 group-hover:text-white"
-                      >
-                        View all
-                        <span aria-hidden="true">↗</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        ))}
       </section>
 
 
@@ -1215,7 +1323,7 @@ export default function Home() {
 
           <div className="absolute left-6 top-6 flex flex-wrap gap-2">
             <span className="rounded-full border border-white/20 bg-black/25 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-              {trip.category}
+              {trip.travelCategory || trip.category}
             </span>
 
             {trip.difficulty && (
@@ -1385,7 +1493,7 @@ export default function Home() {
 
             <div className="absolute left-5 top-5 flex flex-wrap gap-2">
               <span className="rounded-full border border-white/20 bg-black/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                {trip.category}
+                {trip.travelCategory || trip.category}
               </span>
 
               {trip.difficulty && (
