@@ -3,6 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  //
+  // Canonical domain:
+  // www.bucketlistadventure.in → bucketlistadventure.in
+  //
+  if (request.nextUrl.hostname === "www.bucketlistadventure.in") {
+    const canonicalUrl = request.nextUrl.clone();
+
+    canonicalUrl.protocol = "https:";
+    canonicalUrl.hostname = "bucketlistadventure.in";
+
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   let decodedPath = pathname;
 
   try {
@@ -12,6 +25,10 @@ export function proxy(request: NextRequest) {
   }
 
   const path = decodedPath.toLowerCase();
+
+  //
+  // Legacy WordPress redirects
+  //
 
   if (path.includes("weekend-treks")) {
     return NextResponse.redirect(
