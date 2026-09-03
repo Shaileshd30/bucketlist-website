@@ -1,5 +1,23 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import BookingPageClient from "./BookingPageClient";
+
+export const metadata: Metadata = {
+  title: "Booking | Bucketlist Adventure",
+  description:
+    "Complete your booking securely with Bucketlist Adventure.",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+  alternates: {
+    canonical: undefined,
+  },
+};
 
 export default function BookingPage() {
   return (
