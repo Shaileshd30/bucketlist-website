@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
 
 import type { Booking } from "@/app/data/bookings";
 
@@ -417,6 +418,13 @@ async function generateBookingId() {
  */
 
 export async function GET() {
+  const authError =
+    await requireAdmin();
+
+  if (authError) {
+    return authError;
+  }
+
   try {
     const {
       data,
