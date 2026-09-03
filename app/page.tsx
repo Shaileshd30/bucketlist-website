@@ -1235,8 +1235,7 @@ export default function Home() {
             bBatch.departureDate
           ).getTime()
         );
-      })
-      .slice(0, 6);
+      });
 
     if (upcomingTrips.length === 0) {
       return (
