@@ -4,8 +4,9 @@ import CouponManager from "./components/CouponManager";
 import { useEffect, useState } from "react";
 import {
   defaultTrips,
-  tripCategories,
   travelCategories,
+  type DayWiseItineraryItem,
+  type ItineraryFormat,
   type TripBatch,
   type TripCategory,
   type TripData,
@@ -39,6 +40,18 @@ const uploadTripImage = async (file: File) => {
   return String(data.url);
 };
 
+const isDayWiseItineraryItem = (
+  entry: TripData["itinerary"][number]
+): entry is DayWiseItineraryItem =>
+  typeof entry !== "string" &&
+  "title" in entry &&
+  "description" in entry;
+
+const inferItineraryFormat = (trip: TripData): ItineraryFormat =>
+  (trip.itinerary || []).some(isDayWiseItineraryItem)
+    ? "DAY_WISE"
+    : "TIMED";
+
 export default function AdminPage() {
   const [trips, setTrips] = useState<TripData[]>(defaultTrips);
   const [selectedSlug, setSelectedSlug] = useState(defaultTrips[0]?.slug ?? "");
@@ -52,8 +65,10 @@ export default function AdminPage() {
   const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS">("TRIPS");
   const [newTripSlugs, setNewTripSlugs] = useState<string[]>([]);
   const [isDeletingTrip, setIsDeletingTrip] = useState(false);
+  const [itineraryFormatOverrides, setItineraryFormatOverrides] = useState<Record<string, ItineraryFormat>>({});
 
   const trip = trips.find((item) => item.slug === selectedSlug) ?? trips[0] ?? defaultTrips[0];
+  const itineraryFormat = itineraryFormatOverrides[selectedSlug] ?? inferItineraryFormat(trip);
 
   const syncSelectedTrip = (nextTrips: TripData[]) => {
     if (!nextTrips.length) return;
@@ -392,13 +407,139 @@ const deleteBatch = (batchId: string) => {
 
   const normalizeItineraryItem = (
     entry: TripData["itinerary"][number]
-  ): { time: string; activity: string } =>
-    typeof entry === "string"
-      ? { time: "", activity: entry }
-      : {
-          time: entry.time || "",
-          activity: entry.activity || "",
+  ): { time: string; activity: string } => {
+    if (typeof entry === "string") {
+      return { time: "", activity: entry };
+    }
+
+    if (isDayWiseItineraryItem(entry)) {
+      return {
+        time: "",
+        activity: [entry.day, entry.title].filter(Boolean).join(": "),
+      };
+    }
+
+    return {
+      time: entry.time || "",
+      activity: entry.activity || "",
+    };
+  };
+
+  const normalizeDayWiseItem = (
+    entry: TripData["itinerary"][number],
+    index: number
+  ): DayWiseItineraryItem => {
+    if (isDayWiseItineraryItem(entry)) {
+      return {
+        day: entry.day || String(index + 1),
+        title: entry.title || "",
+        description: entry.description || "",
+        location: entry.location || "",
+        image: entry.image || "",
+        highlights: entry.highlights || [],
+      };
+    }
+
+    const activity =
+      typeof entry === "string"
+        ? entry
+        : "activity" in entry
+          ? entry.activity || ""
+          : "";
+
+    return {
+      day: String(index + 1),
+      title: activity || `Day ${index + 1}`,
+      description: "",
+      location: "",
+      image: "",
+      highlights: [],
+    };
+  };
+
+  const updateItineraryFormat = (format: ItineraryFormat) => {
+    if (format === itineraryFormat) return;
+
+    const hasMeaningfulContent = (trip.itinerary || []).some((entry) => {
+      if (typeof entry === "string") return entry.trim().length > 0;
+
+      if (isDayWiseItineraryItem(entry)) {
+        return Boolean(
+          entry.title?.trim() ||
+            entry.description?.trim() ||
+            entry.location?.trim() ||
+            entry.image?.trim() ||
+            entry.highlights?.length
+        );
+      }
+
+      return Boolean(entry.time?.trim() || entry.activity?.trim());
+    });
+
+    if (
+      hasMeaningfulContent &&
+      !window.confirm(
+        "Changing the itinerary format will convert the current itinerary. Please review the converted content before saving. Continue?"
+      )
+    ) {
+      return;
+    }
+
+    setStatus(null);
+    setSiteSynced(false);
+    setItineraryFormatOverrides((current) => ({
+      ...current,
+      [selectedSlug]: format,
+    }));
+
+    setTrips((current) =>
+      current.map((item) => {
+        if (item.slug !== selectedSlug) return item;
+
+        if (format === "DAY_WISE") {
+          const converted =
+            (item.itinerary || []).length > 0
+              ? (item.itinerary || []).map(normalizeDayWiseItem)
+              : [
+                  {
+                    day: "1",
+                    title: "Arrival & welcome",
+                    description: "Add the complete Day 1 itinerary here.",
+                    location: item.destination || "",
+                    image: "",
+                    highlights: [],
+                  },
+                ];
+
+          return {
+            ...item,
+            itinerary: converted,
+          };
+        }
+
+        const converted =
+          (item.itinerary || []).length > 0
+            ? (item.itinerary || []).map((entry, index) => {
+                if (isDayWiseItineraryItem(entry)) {
+                  return {
+                    time: "",
+                    activity: `Day ${entry.day || index + 1}: ${entry.title}${
+                      entry.description ? ` — ${entry.description}` : ""
+                    }`,
+                  };
+                }
+
+                return normalizeItineraryItem(entry);
+              })
+            : [{ time: "", activity: "Add itinerary details here" }];
+
+        return {
+          ...item,
+          itinerary: converted,
         };
+      })
+    );
+  };
 
   const updateItineraryItem = (
     index: number,
@@ -449,6 +590,82 @@ const deleteBatch = (batchId: string) => {
     );
   };
 
+  const updateDayWiseItineraryItem = (
+    index: number,
+    field: keyof DayWiseItineraryItem,
+    value: string | string[]
+  ) => {
+    setStatus(null);
+    setSiteSynced(false);
+
+    setTrips((current) =>
+      current.map((item) => {
+        if (item.slug !== selectedSlug) return item;
+
+        return {
+          ...item,
+          itinerary: (item.itinerary || []).map((entry, entryIndex) => {
+            const normalized = normalizeDayWiseItem(entry, entryIndex);
+
+            return entryIndex === index
+              ? { ...normalized, [field]: value }
+              : normalized;
+          }),
+        };
+      })
+    );
+  };
+
+  const addDayWiseItineraryItem = () => {
+    setStatus(null);
+    setSiteSynced(false);
+
+    setTrips((current) =>
+      current.map((item) => {
+        if (item.slug !== selectedSlug) return item;
+
+        const existing = (item.itinerary || []).map(normalizeDayWiseItem);
+
+        return {
+          ...item,
+          itinerary: [
+            ...existing,
+            {
+              day: String(existing.length + 1),
+              title: "",
+              description: "",
+              location: item.destination || "",
+              image: "",
+              highlights: [],
+            },
+          ],
+        };
+      })
+    );
+  };
+
+  const handleDayImageUpload = async (
+    index: number,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const imageUrl = await uploadTripImage(file);
+      updateDayWiseItineraryItem(index, "image", imageUrl);
+      setStatus({
+        type: "success",
+        message: `Day ${index + 1} image uploaded. Save changes to publish it.`,
+      });
+      setError("");
+    } catch {
+      setError("Could not upload the day image. Please try another file.");
+    }
+
+    event.target.value = "";
+  };
+
   const deleteItineraryItem = (index: number) => {
     setStatus(null);
     setSiteSynced(false);
@@ -458,9 +675,9 @@ const deleteBatch = (batchId: string) => {
         item.slug === selectedSlug
           ? {
               ...item,
-              itinerary: (item.itinerary || [])
-                .filter((_, entryIndex) => entryIndex !== index)
-                .map(normalizeItineraryItem),
+              itinerary: (item.itinerary || []).filter(
+                (_, entryIndex) => entryIndex !== index
+              ),
             }
           : item
       )
@@ -628,14 +845,29 @@ const deleteBatch = (batchId: string) => {
     if (!trip.summary?.trim() || trip.summary.trim() === "Write a short overview for this trip.") validationErrors.push("Add a trip summary.");
     if (!overview || overview === "Describe the experience, route, and highlights for travelers here.") validationErrors.push("Add the trip overview.");
     if (!trip.image?.trim()) validationErrors.push("Add a main trip image.");
-    const hasValidItinerary = (trip.itinerary || []).some((entry) => {
-      const normalized = normalizeItineraryItem(entry);
-      return (
-        normalized.activity.trim().length > 0 &&
-        normalized.activity.trim() !== "Add itinerary details here"
+    const hasValidItinerary =
+      itineraryFormat === "DAY_WISE"
+        ? (trip.itinerary || []).some((entry, index) => {
+            const normalized = normalizeDayWiseItem(entry, index);
+            return (
+              normalized.title.trim().length > 0 &&
+              normalized.description.trim().length > 0
+            );
+          })
+        : (trip.itinerary || []).some((entry) => {
+            const normalized = normalizeItineraryItem(entry);
+            return (
+              normalized.activity.trim().length > 0 &&
+              normalized.activity.trim() !== "Add itinerary details here"
+            );
+          });
+    if (!hasValidItinerary) {
+      validationErrors.push(
+        itineraryFormat === "DAY_WISE"
+          ? "Add at least one day with a title and description."
+          : "Add the trip itinerary."
       );
-    });
-    if (!hasValidItinerary) validationErrors.push("Add the trip itinerary.");
+    }
     if (!trip.includes?.length || trip.includes.includes("Add inclusions here")) validationErrors.push("Add trip inclusions.");
     if (!trip.notIncludes?.length || trip.notIncludes.includes("Add exclusions here")) validationErrors.push("Add trip exclusions.");
 
@@ -1038,37 +1270,6 @@ const deleteBatch = (batchId: string) => {
               />
               <p className="text-xs leading-5 text-[#718078]">
                 Enter the destination or region for this trip. You can add new destinations without changing code.
-              </p>
-            </label>
-
-            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Legacy category</span>
-              <select
-                value={trip.category}
-                onChange={(event) => {
-                  setStatus(null);
-                  setSiteSynced(false);
-                  setTrips((current) =>
-                    current.map((item) =>
-                      item.slug === selectedSlug
-                        ? {
-                            ...item,
-                            category: event.target.value as TripCategory,
-                          }
-                        : item
-                    )
-                  );
-                }}
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
-              >
-                {tripCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs leading-5 text-[#718078]">
-                Temporary compatibility field for the current public Trips page. We will remove it after the public taxonomy migration.
               </p>
             </label>
 
@@ -1496,75 +1697,267 @@ const deleteBatch = (batchId: string) => {
           </label>
 
           <div className="mt-5 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
               <div>
                 <span className="text-sm font-medium text-[#17251d]">Itinerary</span>
                 <p className="mt-1 text-xs leading-5 text-[#718078]">
-                  Add a time and activity for each itinerary step. Leave the time blank for headings such as Day 1 or Day 2.
+                  Use Timed itinerary for treks and tightly scheduled departures.
+                  Use Day-wise itinerary for domestic and international tour packages.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={addItineraryItem}
-                className="inline-flex items-center justify-center rounded-full bg-[#17251d] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-500"
-              >
-                + Add activity
-              </button>
+              <label className="block min-w-[240px] space-y-2 text-sm font-medium text-[#17251d]">
+                <span>Itinerary format</span>
+                <select
+                  value={itineraryFormat}
+                  onChange={(event) =>
+                    updateItineraryFormat(event.target.value as ItineraryFormat)
+                  }
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+                >
+                  <option value="TIMED">Timed itinerary</option>
+                  <option value="DAY_WISE">Day-wise itinerary</option>
+                </select>
+              </label>
             </div>
 
-            <div className="space-y-3">
-              {(trip.itinerary || []).map((entry, index) => {
-                const itineraryItem = normalizeItineraryItem(entry);
-
-                return (
-                  <div
-                    key={`${index}-${itineraryItem.activity}`}
-                    className="grid gap-3 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[180px_1fr_auto] md:items-end"
+            {itineraryFormat === "TIMED" ? (
+              <>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-xs leading-5 text-[#718078]">
+                    Add a time and activity for each step. Leave the time blank for headings such as Day 1 or Day 2.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={addItineraryItem}
+                    className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#17251d] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-500"
                   >
-                    <label className="block space-y-2 text-sm font-medium text-[#17251d]">
-                      <span>Time</span>
-                      <input
-                        type="text"
-                        value={itineraryItem.time}
-                        onChange={(event) =>
-                          updateItineraryItem(index, "time", event.target.value)
-                        }
-                        placeholder="Example: 06:00 AM"
-                        className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-                      />
-                    </label>
-
-                    <label className="block space-y-2 text-sm font-medium text-[#17251d]">
-                      <span>Activity</span>
-                      <input
-                        type="text"
-                        value={itineraryItem.activity}
-                        onChange={(event) =>
-                          updateItineraryItem(index, "activity", event.target.value)
-                        }
-                        placeholder="Example: Departure from Pune"
-                        className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-                      />
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteItineraryItem(index)}
-                      className="h-[50px] rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                );
-              })}
-
-              {(trip.itinerary || []).length === 0 && (
-                <div className="rounded-2xl border border-dashed border-black/15 bg-white p-6 text-center text-sm text-[#5d6862]">
-                  No itinerary activities yet. Select “Add activity” to create the first one.
+                    + Add activity
+                  </button>
                 </div>
-              )}
-            </div>
+
+                <div className="space-y-3">
+                  {(trip.itinerary || []).map((entry, index) => {
+                    const itineraryItem = normalizeItineraryItem(entry);
+
+                    return (
+                      <div
+                        key={`timed-${index}`}
+                        className="grid gap-3 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[180px_1fr_auto] md:items-end"
+                      >
+                        <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+                          <span>Time</span>
+                          <input
+                            type="text"
+                            value={itineraryItem.time}
+                            onChange={(event) =>
+                              updateItineraryItem(index, "time", event.target.value)
+                            }
+                            placeholder="Example: 06:00 AM"
+                            className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                          />
+                        </label>
+
+                        <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+                          <span>Activity</span>
+                          <input
+                            type="text"
+                            value={itineraryItem.activity}
+                            onChange={(event) =>
+                              updateItineraryItem(index, "activity", event.target.value)
+                            }
+                            placeholder="Example: Departure from Pune"
+                            className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteItineraryItem(index)}
+                          className="h-[50px] rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {(trip.itinerary || []).length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-black/15 bg-white p-6 text-center text-sm text-[#5d6862]">
+                      No itinerary activities yet. Select “Add activity” to create the first one.
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-xs leading-5 text-[#718078]">
+                    Create one card per day. Add a title, detailed description, location, image and optional highlights.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={addDayWiseItineraryItem}
+                    className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#17251d] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-500"
+                  >
+                    + Add day
+                  </button>
+                </div>
+
+                <div className="space-y-5">
+                  {(trip.itinerary || []).map((entry, index) => {
+                    const dayItem = normalizeDayWiseItem(entry, index);
+
+                    return (
+                      <div
+                        key={`day-wise-${index}`}
+                        className="rounded-[22px] border border-black/10 bg-white p-5"
+                      >
+                        <div className="mb-4 flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
+                              Day {dayItem.day || index + 1}
+                            </p>
+                            <p className="mt-1 text-sm text-[#718078]">
+                              Tour-package itinerary card
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteItineraryItem(index)}
+                            className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                          >
+                            Delete day
+                          </button>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                            <span>Day number</span>
+                            <input
+                              type="text"
+                              value={dayItem.day}
+                              onChange={(event) =>
+                                updateDayWiseItineraryItem(index, "day", event.target.value)
+                              }
+                              placeholder="1"
+                              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                            />
+                          </label>
+
+                          <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                            <span>Location</span>
+                            <input
+                              type="text"
+                              value={dayItem.location || ""}
+                              onChange={(event) =>
+                                updateDayWiseItineraryItem(index, "location", event.target.value)
+                              }
+                              placeholder="Example: Dubai"
+                              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                            />
+                          </label>
+
+                          <label className="space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
+                            <span>Day title</span>
+                            <input
+                              type="text"
+                              value={dayItem.title}
+                              onChange={(event) =>
+                                updateDayWiseItineraryItem(index, "title", event.target.value)
+                              }
+                              placeholder="Example: Arrival in Dubai & Marina Dhow Cruise"
+                              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                            />
+                          </label>
+
+                          <label className="space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
+                            <span>Description</span>
+                            <textarea
+                              value={dayItem.description}
+                              onChange={(event) =>
+                                updateDayWiseItineraryItem(index, "description", event.target.value)
+                              }
+                              rows={5}
+                              placeholder="Write the complete day plan, sightseeing flow, transfers and experience details."
+                              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                            />
+                          </label>
+
+                          <label className="space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
+                            <span>Highlights</span>
+                            <textarea
+                              value={(dayItem.highlights || []).join("\n")}
+                              onChange={(event) =>
+                                updateDayWiseItineraryItem(
+                                  index,
+                                  "highlights",
+                                  event.target.value
+                                    .split(/\n|,/)
+                                    .map((value) => value.trim())
+                                    .filter(Boolean)
+                                )
+                              }
+                              rows={3}
+                              placeholder={"Airport transfer\nBurj Khalifa\nDinner"}
+                              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                            />
+                            <p className="text-xs text-[#718078]">
+                              Add one highlight per line.
+                            </p>
+                          </label>
+
+                          <div className="space-y-3 md:col-span-2">
+                            <p className="text-sm font-medium text-[#17251d]">Day image</p>
+
+                            {dayItem.image ? (
+                              <div className="overflow-hidden rounded-2xl border border-black/10">
+                                <img
+                                  src={dayItem.image}
+                                  alt={`Day ${dayItem.day} itinerary`}
+                                  className="h-52 w-full object-cover"
+                                />
+                              </div>
+                            ) : null}
+
+                            <div className="flex flex-wrap gap-3">
+                              <label className="inline-flex cursor-pointer items-center rounded-full bg-[#17251d] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-500">
+                                Upload day image
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(event) => handleDayImageUpload(index, event)}
+                                  className="hidden"
+                                />
+                              </label>
+
+                              {dayItem.image ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateDayWiseItineraryItem(index, "image", "")
+                                  }
+                                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-600"
+                                >
+                                  Remove image
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {(trip.itinerary || []).length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-black/15 bg-white p-6 text-center text-sm text-[#5d6862]">
+                      No itinerary days yet. Select “Add day” to create Day 1.
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           <label className="mt-5 block space-y-2 text-sm font-medium text-[#17251d]">

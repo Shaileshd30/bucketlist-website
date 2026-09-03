@@ -39,6 +39,27 @@ export type TravelCategory =
   | "Domestic Tours"
   | "International Tours";
 
+export type ItineraryFormat = "TIMED" | "DAY_WISE";
+
+export type TimedItineraryItem = {
+  time: string;
+  activity: string;
+};
+
+export type DayWiseItineraryItem = {
+  day: string;
+  title: string;
+  description: string;
+  location?: string;
+  image?: string;
+  highlights?: string[];
+};
+
+export type ItineraryItem =
+  | string
+  | TimedItineraryItem
+  | DayWiseItineraryItem;
+
 export type TripData = {
   // Basic information
   id: string;
@@ -89,13 +110,7 @@ export type TripData = {
 
   image: string;
 
-  itinerary: Array<
-    | string
-    | {
-        time: string;
-        activity: string;
-      }
-  >;
+  itinerary: ItineraryItem[];
 
   includes: string[];
   notIncludes: string[];
