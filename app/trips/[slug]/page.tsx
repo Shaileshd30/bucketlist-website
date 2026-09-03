@@ -205,9 +205,10 @@ async function getTripBySlug(
       error: tripError,
     } = await supabaseAdmin
       .from("trips")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
+.select("*")
+.eq("slug", slug)
+.eq("archived", false)
+.maybeSingle();
 
     if (tripError) {
       console.error(
