@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { defaultTrips, type TripBatch, type TripData } from "../../data/trips";
+import { jsPDF } from "jspdf";
+import { useEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { defaultTrips, type DayWiseItineraryItem, type TripBatch, type TripData } from "../../data/trips";
 
 type BookingFormState = {
   name: string;
@@ -11,11 +14,61 @@ type BookingFormState = {
   message: string;
 };
 
+const pdfAssetToDataUrl = async (
+  src: string
+): Promise<string | null> => {
+  if (!src) return null;
+
+  try {
+    const response = await fetch(src, { cache: "force-cache" });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const blob = await response.blob();
+
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = () =>
+        resolve(typeof reader.result === "string" ? reader.result : null);
+
+      reader.onerror = () => resolve(null);
+
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+const pdfImageFormat = (dataUrl: string) => {
+  const normalized = dataUrl.toLowerCase();
+
+  if (normalized.startsWith("data:image/png")) return "PNG";
+  if (normalized.startsWith("data:image/webp")) return "WEBP";
+
+  return "JPEG";
+};
+
+const safePdfFileName = (value: string) =>
+  value
+    .trim()
+    .replace(/[^a-z0-9-_]+/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "trip";
+
 export function TripPageClient({ trip }: { trip: TripData }) {
+  const brandLogo = "/bucketlist-logo.png";
+  const pdfLogo = "/icon.png";
+  const pageRef = useRef<HTMLElement | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>(trip.image || "");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+  const [expandedItineraryDays, setExpandedItineraryDays] = useState<number[]>([0]);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const [booking, setBooking] = useState<BookingFormState>({
     name: "",
@@ -308,39 +361,593 @@ const displayAvailableSeats = displayBatch
     window.location.href = `/book?${params.toString()}`;
   };
 
-  const renderItineraryItem = (
-    item:
-      | string
-      | {
-          day?: string;
-          time?: string;
-          activity: string;
-        }
-  ) => {
-    if (typeof item === "string") {
-      return item;
-    }
+  const isDayWiseItineraryItem = (
+    item: TripData["itinerary"][number]
+  ): item is DayWiseItineraryItem =>
+    typeof item !== "string" &&
+    "title" in item &&
+    "description" in item;
 
-    return (
-      <>
-        {(item.day || item.time) && (
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-[#17251d]/60">
-            {[item.day, item.time].filter(Boolean).join(" ")}
-          </span>
-        )}
+  const dayWiseItinerary = itinerary.filter(isDayWiseItineraryItem);
+  const hasDayWiseItinerary = dayWiseItinerary.length > 0;
 
-        <span>{item.activity}</span>
-      </>
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const root = pageRef.current;
+    if (!root) return;
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    if (reduceMotion) return;
+
+    const context = gsap.context(() => {
+      gsap.from("[data-trip-back]", {
+        opacity: 0,
+        y: -10,
+        duration: 0.45,
+        ease: "power2.out",
+      });
+
+      gsap.from("[data-trip-hero-image]", {
+        opacity: 0,
+        scale: 1.04,
+        duration: 1,
+        ease: "power3.out",
+      });
+
+      gsap.from("[data-trip-hero-copy] > *", {
+        opacity: 0,
+        y: 18,
+        duration: 0.65,
+        stagger: 0.08,
+        delay: 0.08,
+        ease: "power3.out",
+      });
+
+      gsap.utils.toArray<HTMLElement>("[data-trip-reveal]").forEach((element) => {
+        gsap.from(element, {
+          opacity: 0,
+          y: 28,
+          duration: 0.7,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: element,
+            start: "top 88%",
+            once: true,
+          },
+        });
+      });
+
+      gsap.utils
+        .toArray<HTMLElement>("[data-itinerary-card]")
+        .forEach((element, index) => {
+          gsap.from(element, {
+            opacity: 0,
+            y: 24,
+            duration: 0.55,
+            delay: Math.min(index * 0.04, 0.2),
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: element,
+              start: "top 92%",
+              once: true,
+            },
+          });
+        });
+    }, root);
+
+    return () => context.revert();
+  }, [trip.slug, hasDayWiseItinerary]);
+
+
+  const toggleItineraryDay = (index: number) => {
+    setExpandedItineraryDays((current) =>
+      current.includes(index)
+        ? current.filter((item) => item !== index)
+        : [...current, index]
     );
   };
 
+  const expandAllItineraryDays = () => {
+    setExpandedItineraryDays(
+      expandedItineraryDays.length === dayWiseItinerary.length
+        ? []
+        : dayWiseItinerary.map((_, index) => index)
+    );
+  };
+
+  const buildDownloadableItinerary = () => {
+    const lines: string[] = [
+      trip.title,
+      trip.subtitle || "",
+      "",
+      `Duration: ${displayDuration}`,
+      trip.startPoint ? `Start point: ${trip.startPoint}` : "",
+      trip.destination ? `Destination: ${trip.destination}` : "",
+      "",
+      "ITINERARY",
+      "",
+    ].filter(Boolean);
+
+    if (hasDayWiseItinerary) {
+      dayWiseItinerary.forEach((day, index) => {
+        lines.push(
+          `DAY ${day.day || index + 1}: ${day.title}`,
+          day.location ? `Location: ${day.location}` : "",
+          day.description,
+          ...(day.highlights?.length
+            ? ["Highlights:", ...day.highlights.map((item) => `- ${item}`)]
+            : []),
+          ""
+        );
+      });
+    } else {
+      itinerary.forEach((item, index) => {
+        if (typeof item === "string") {
+          lines.push(`${index + 1}. ${item}`);
+          return;
+        }
+
+        if ("activity" in item) {
+          lines.push(
+            `${item.time ? `${item.time} - ` : ""}${item.activity}`
+          );
+        }
+      });
+    }
+
+    return lines.filter((line) => line !== undefined).join("\n");
+  };
+
+  const downloadItinerary = async () => {
+    if (isDownloadingPdf) return;
+
+    setIsDownloadingPdf(true);
+
+    try {
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const marginX = 15;
+      const contentWidth = pageWidth - marginX * 2;
+      const footerHeight = 18;
+      const bottomLimit = pageHeight - footerHeight - 8;
+
+      const dark = [23, 37, 29] as const;
+      const orange = [242, 140, 40] as const;
+      const muted = [93, 104, 98] as const;
+      const soft = [247, 245, 242] as const;
+      const lightBorder = [224, 226, 224] as const;
+
+      const logoData = await pdfAssetToDataUrl(pdfLogo);
+
+      const addFooter = () => {
+        pdf.setDrawColor(...lightBorder);
+        pdf.line(marginX, pageHeight - footerHeight, pageWidth - marginX, pageHeight - footerHeight);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...dark);
+        pdf.text("Bucketlist Adventure", marginX, pageHeight - 11);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(...muted);
+        pdf.text(
+          "WhatsApp: +91 92255 31257  |  Contact: +91 84828 46287",
+          marginX,
+          pageHeight - 7
+        );
+
+        pdf.text(
+          "bucketlistdestinations2@gmail.com  |  bucketlistadventure.in",
+          marginX,
+          pageHeight - 3.5
+        );
+
+        pdf.setFontSize(7);
+        pdf.text(
+          `${pdf.getCurrentPageInfo().pageNumber}`,
+          pageWidth - marginX,
+          pageHeight - 3.5,
+          { align: "right" }
+        );
+      };
+
+      const addBrandHeader = () => {
+        if (logoData) {
+          try {
+            pdf.addImage(
+              logoData,
+              pdfImageFormat(logoData),
+              marginX,
+              12,
+              32,
+              17,
+              undefined,
+              "FAST"
+            );
+          } catch {
+            // Continue without logo if the browser/PDF engine cannot decode it.
+          }
+        }
+
+        const brandX = logoData ? marginX + 38 : marginX;
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.setTextColor(...orange);
+        pdf.text("BUCKETLIST ADVENTURE", brandX, 18);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(...dark);
+        pdf.text("We Plan It. You Live It.", brandX, 23);
+
+        const contactX = pageWidth - marginX;
+
+        pdf.setFontSize(7.4);
+        pdf.setTextColor(...dark);
+        pdf.text("+91 92255 31257", contactX, 14, { align: "right" });
+        pdf.text("+91 84828 46287", contactX, 18, { align: "right" });
+        pdf.text("bucketlistdestinations2@gmail.com", contactX, 22, {
+          align: "right",
+        });
+        pdf.text("bucketlistadventure.in", contactX, 26, { align: "right" });
+
+        pdf.setDrawColor(...lightBorder);
+        pdf.line(marginX, 32, pageWidth - marginX, 32);
+      };
+
+      const addNewPage = () => {
+        addFooter();
+        pdf.addPage();
+        addBrandHeader();
+        return 39;
+      };
+
+      addBrandHeader();
+
+      let y = 43;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(24);
+      pdf.setTextColor(...dark);
+      pdf.text(trip.title, marginX, y);
+      y += 8;
+
+      if (trip.subtitle) {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor(...muted);
+
+        const subtitleLines = pdf.splitTextToSize(trip.subtitle, contentWidth);
+        pdf.text(subtitleLines, marginX, y);
+        y += subtitleLines.length * 5 + 4;
+      }
+
+      const metaItems = [
+        displayDuration ? `Duration: ${displayDuration}` : "",
+        trip.destination ? `Destination: ${trip.destination}` : "",
+        trip.startPoint ? `Start point: ${trip.startPoint}` : "",
+      ].filter(Boolean);
+
+      if (metaItems.length) {
+        pdf.setFillColor(...soft);
+        pdf.roundedRect(marginX, y, contentWidth, 12, 3, 3, "F");
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.2);
+        pdf.setTextColor(...dark);
+        pdf.text(metaItems.join("   •   "), marginX + 4, y + 7.2);
+
+        y += 17;
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.setTextColor(...orange);
+      pdf.text("ITINERARY", marginX, y);
+      y += 7;
+
+      if (hasDayWiseItinerary) {
+        for (let index = 0; index < dayWiseItinerary.length; index += 1) {
+          const day = dayWiseItinerary[index];
+
+          const dayTitle = `DAY ${day.day || index + 1}  •  ${day.title}`;
+          const titleLines = pdf.splitTextToSize(dayTitle, contentWidth - 8);
+
+          const descriptionLines = pdf.splitTextToSize(
+            day.description || "",
+            contentWidth - 8
+          );
+
+          const highlights = day.highlights || [];
+          const highlightLines = highlights.flatMap((highlight) =>
+            pdf
+              .splitTextToSize(`• ${highlight}`, contentWidth - 12)
+              .map((line: string) => line)
+          );
+
+          const imageData = day.image
+            ? await pdfAssetToDataUrl(day.image)
+            : null;
+
+          const imageHeight = imageData ? 44 : 0;
+
+          const cardHeight =
+            13 +
+            titleLines.length * 5 +
+            (day.location ? 5 : 0) +
+            Math.max(descriptionLines.length * 4.5, imageHeight) +
+            (highlightLines.length ? highlightLines.length * 4 + 7 : 0) +
+            9;
+
+          if (y + cardHeight > bottomLimit) {
+            y = addNewPage();
+          }
+
+          const cardTop = y;
+
+          pdf.setDrawColor(...lightBorder);
+          pdf.setFillColor(255, 255, 255);
+          pdf.roundedRect(marginX, cardTop, contentWidth, cardHeight, 4, 4, "FD");
+
+          pdf.setFillColor(...dark);
+          pdf.roundedRect(marginX + 4, cardTop + 5, 18, 18, 3, 3, "F");
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text("DAY", marginX + 13, cardTop + 10, { align: "center" });
+
+          pdf.setFontSize(12);
+          pdf.text(
+            String(day.day || index + 1),
+            marginX + 13,
+            cardTop + 18,
+            { align: "center" }
+          );
+
+          const textX = marginX + 27;
+          const textWidth = imageData ? contentWidth - 27 - 58 : contentWidth - 31;
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(11.5);
+          pdf.setTextColor(...dark);
+
+          const visibleTitleLines = pdf.splitTextToSize(
+            day.title,
+            textWidth
+          );
+
+          pdf.text(visibleTitleLines, textX, cardTop + 9);
+
+          let innerY = cardTop + 9 + visibleTitleLines.length * 5;
+
+          if (day.location) {
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(7.8);
+            pdf.setTextColor(...orange);
+            pdf.text(day.location, textX, innerY + 1);
+            innerY += 6;
+          }
+
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(8.4);
+          pdf.setTextColor(...muted);
+
+          const bodyWidth = imageData ? textWidth : contentWidth - 35;
+          const bodyLines = pdf.splitTextToSize(
+            day.description || "",
+            bodyWidth
+          );
+
+          pdf.text(bodyLines, textX, innerY + 2);
+
+          if (imageData) {
+            try {
+              pdf.addImage(
+                imageData,
+                pdfImageFormat(imageData),
+                pageWidth - marginX - 54,
+                cardTop + 8,
+                50,
+                44,
+                undefined,
+                "FAST"
+              );
+            } catch {
+              // Continue if a remote day image cannot be embedded.
+            }
+          }
+
+          const bodyBottom =
+            innerY +
+            2 +
+            bodyLines.length * 4.5;
+
+          let highlightsY = Math.max(bodyBottom + 5, cardTop + 57);
+
+          if (highlights.length) {
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(7.5);
+            pdf.setTextColor(...dark);
+            pdf.text("Highlights", textX, highlightsY);
+            highlightsY += 4.5;
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(7.7);
+            pdf.setTextColor(...muted);
+
+            const highlightText = highlights
+              .map((highlight) => `• ${highlight}`)
+              .join("   ");
+
+            const wrappedHighlights = pdf.splitTextToSize(
+              highlightText,
+              contentWidth - 31
+            );
+
+            pdf.text(wrappedHighlights, textX, highlightsY);
+          }
+
+          y = cardTop + cardHeight + 5;
+        }
+      } else {
+        for (let index = 0; index < itinerary.length; index += 1) {
+          const item = itinerary[index];
+
+          let line = "";
+
+          if (typeof item === "string") {
+            line = item;
+          } else if ("activity" in item) {
+            line = `${item.time ? `${item.time} - ` : ""}${item.activity}`;
+          }
+
+          if (!line.trim()) continue;
+
+          const lines = pdf.splitTextToSize(line, contentWidth - 16);
+          const rowHeight = Math.max(12, lines.length * 4.5 + 6);
+
+          if (y + rowHeight > bottomLimit) {
+            y = addNewPage();
+          }
+
+          pdf.setFillColor(...soft);
+          pdf.roundedRect(marginX, y, contentWidth, rowHeight, 3, 3, "F");
+
+          pdf.setFillColor(...dark);
+          pdf.circle(marginX + 6, y + rowHeight / 2, 3, "F");
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text(String(index + 1), marginX + 6, y + rowHeight / 2 + 2, {
+            align: "center",
+          });
+
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(8.5);
+          pdf.setTextColor(...dark);
+          pdf.text(lines, marginX + 12, y + 5);
+
+          y += rowHeight + 3;
+        }
+      }
+
+      if (includes.length || excludes.length) {
+        const sectionTop = y + 3;
+
+        if (sectionTop + 45 > bottomLimit) {
+          y = addNewPage();
+        } else {
+          y = sectionTop;
+        }
+
+        const columnGap = 5;
+        const columnWidth = (contentWidth - columnGap) / 2;
+
+        const drawListSection = (
+          title: string,
+          items: string[],
+          x: number,
+          marker: string,
+          markerColor: readonly [number, number, number]
+        ) => {
+          const wrappedItems = items.map((item) =>
+            pdf.splitTextToSize(item, columnWidth - 12)
+          );
+
+          const boxHeight = Math.max(
+            30,
+            14 +
+              wrappedItems.reduce(
+                (sum, lines) => sum + lines.length * 4.1 + 2,
+                0
+              )
+          );
+
+          pdf.setDrawColor(...lightBorder);
+          pdf.roundedRect(x, y, columnWidth, boxHeight, 4, 4, "D");
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(9);
+          pdf.setTextColor(...orange);
+          pdf.text(title, x + 5, y + 8);
+
+          let itemY = y + 15;
+
+          wrappedItems.forEach((lines) => {
+            pdf.setFont("helvetica", "bold");
+            pdf.setTextColor(...markerColor);
+            pdf.setFontSize(8);
+            pdf.text(marker, x + 5, itemY);
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(...dark);
+            pdf.setFontSize(7.8);
+            pdf.text(lines, x + 10, itemY);
+
+            itemY += lines.length * 4.1 + 2;
+          });
+
+          return boxHeight;
+        };
+
+        const leftHeight = drawListSection(
+          "INCLUDED",
+          includes,
+          marginX,
+          "✓",
+          [27, 122, 71] as const
+        );
+
+        const rightHeight = drawListSection(
+          "NOT INCLUDED",
+          excludes,
+          marginX + columnWidth + columnGap,
+          "–",
+          [190, 38, 38] as const
+        );
+
+        y += Math.max(leftHeight, rightHeight) + 6;
+      }
+
+      addFooter();
+
+      pdf.save(
+        `${safePdfFileName(trip.title)}-Itinerary-Bucketlist-Adventure.pdf`
+      );
+    } catch (error) {
+      console.error("Could not generate itinerary PDF:", error);
+      alert(
+        "We could not generate the itinerary PDF right now. Please try again."
+      );
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+
   return (
-    <main className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
+    <main ref={pageRef} className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:px-10">
 
         {/* Back */}
         <Link
           href="/"
+          data-trip-back
           className="mb-8 inline-flex items-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
         >
           ← Back to home
@@ -351,13 +958,14 @@ const displayAvailableSeats = displayBatch
           <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
 
             <div
+              data-trip-hero-image
               className="min-h-[380px] bg-cover bg-center"
               style={{
                 backgroundImage: `url('${primaryImage || trip.image}')`,
               }}
             />
 
-            <div className="p-8 lg:p-10">
+            <div data-trip-hero-copy className="p-8 lg:p-10">
               <p className="mb-3 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
                 {trip.startPoint}
               </p>
@@ -450,7 +1058,7 @@ const displayAvailableSeats = displayBatch
 
         {/* GALLERY */}
         {gallery.length > 0 && (
-          <div className="mt-10 rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(0,0,0,0.04)]">
+          <div data-trip-reveal className="mt-10 rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(0,0,0,0.04)]">
             <div className="mb-5 flex items-center justify-between gap-4">
               <p className="text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
                 Photo gallery
@@ -527,8 +1135,214 @@ const displayAvailableSeats = displayBatch
           </div>
         )}
 
+        {hasDayWiseItinerary && (
+          <section data-trip-reveal className="mt-12 overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col gap-5 border-b border-black/10 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-5">
+                <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#17251d] p-2 sm:h-24 sm:w-40">
+                  <img
+                    src={brandLogo}
+                    alt="Bucketlist Adventure"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                    Itinerary
+                  </p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#5d6862]">
+                    Day-wise plan with key highlights, stays and experiences.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#5d6862]">
+                    <span><strong className="text-[#17251d]">WhatsApp:</strong> +91 92255 31257</span>
+                    <span><strong className="text-[#17251d]">Contact:</strong> +91 84828 46287</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={downloadItinerary}
+                  disabled={isDownloadingPdf}
+                  className="rounded-full border border-[#17251d]/15 bg-white px-4 py-2.5 text-xs font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isDownloadingPdf ? "Preparing PDF..." : "↓ Download PDF"}
+                </button>
+
+                
+                <button
+                  type="button"
+                  onClick={expandAllItineraryDays}
+                  className="rounded-full border border-[#17251d]/15 bg-white px-4 py-2.5 text-xs font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
+                >
+                  {expandedItineraryDays.length === dayWiseItinerary.length
+                    ? "Collapse all"
+                    : "Expand all days"}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-6 lg:p-8">
+              {dayWiseItinerary.map((day, index) => {
+                const expanded = expandedItineraryDays.includes(index);
+
+                return (
+                  <article
+                    key={`day-${day.day}-${index}`}
+                    data-itinerary-card
+                    className="overflow-hidden rounded-[24px] border border-black/10 bg-[#f7f5f2]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleItineraryDay(index)}
+                      className="grid w-full gap-4 p-4 text-left sm:grid-cols-[70px_1fr_auto] sm:items-center sm:p-5"
+                    >
+                      <div className="flex h-14 w-14 flex-col items-center justify-center rounded-2xl bg-[#17251d] text-white">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/70">
+                          Day
+                        </span>
+                        <span className="text-xl font-bold">
+                          {day.day || index + 1}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <h3 className="text-lg font-bold text-[#17251d] sm:text-xl">
+                            {day.title}
+                          </h3>
+
+                          {day.location && (
+                            <span className="text-xs font-semibold text-green-700">
+                              ● {day.location}
+                            </span>
+                          )}
+                        </div>
+
+                        {day.highlights?.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {day.highlights.slice(0, 5).map((highlight) => (
+                              <span
+                                key={highlight}
+                                className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-[#5d6862]"
+                              >
+                                {highlight}
+                              </span>
+                            ))}
+                            {day.highlights.length > 5 && (
+                              <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-[#5d6862]">
+                                +{day.highlights.length - 5} more
+                              </span>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <span className="text-xs font-bold text-green-700">
+                        {expanded ? "See less ↑" : "See more ↓"}
+                      </span>
+                    </button>
+
+                    {expanded && (
+                      <div className="border-t border-black/10 bg-white p-5 sm:p-7 lg:p-8">
+                        <div
+                          className={`grid gap-7 ${
+                            day.image
+                              ? "lg:grid-cols-[1.05fr_0.95fr] lg:items-start"
+                              : ""
+                          }`}
+                        >
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
+                              Day {day.day || index + 1}
+                            </p>
+
+                            <h4 className="mt-2 text-2xl font-bold text-[#17251d] sm:text-3xl">
+                              {day.title}
+                            </h4>
+
+                            <p className="mt-4 whitespace-pre-line text-base leading-7 text-[#5d6862]">
+                              {day.description}
+                            </p>
+
+                            {day.highlights?.length ? (
+                              <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                {day.highlights.map((highlight) => (
+                                  <div
+                                    key={highlight}
+                                    className="flex items-start gap-2 rounded-xl bg-[#f7f5f2] px-3 py-2.5"
+                                  >
+                                    <span className="mt-0.5 text-green-700">✓</span>
+                                    <span className="text-sm font-medium leading-5 text-[#17251d]">
+                                      {highlight}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {day.image ? (
+                            <div className="overflow-hidden rounded-[22px] border border-black/10 bg-[#f7f5f2]">
+                              <img
+                                src={day.image}
+                                alt={`${trip.title} - Day ${day.day || index + 1}`}
+                                className="h-72 w-full object-cover sm:h-80 lg:h-[360px]"
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {hasDayWiseItinerary && (
+          <div data-trip-reveal className="mt-8 grid gap-6 lg:grid-cols-2">
+            <div className="rounded-[28px] border border-black/10 bg-white p-7">
+              <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                Included
+              </p>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {includes.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 rounded-2xl bg-[#f7f5f2] p-3"
+                  >
+                    <span className="mt-1 text-green-700">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-[28px] border border-black/10 bg-white p-7">
+              <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                Not included
+              </p>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {excludes.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 rounded-2xl bg-[#f7f5f2] p-3"
+                  >
+                    <span className="mt-1 text-red-500">–</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {/* MAIN CONTENT */}
-        <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <div data-trip-reveal className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
 
           <div className="space-y-8">
 
@@ -542,61 +1356,90 @@ const displayAvailableSeats = displayBatch
                 {overview}
               </p>
 
-              <div className="mt-10">
-                <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
-                  Itinerary
-                </p>
+              {!hasDayWiseItinerary && (
+                <div className="mt-10">
+                  <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                        Itinerary
+                      </p>
+                    </div>
 
-                <div className="space-y-4">
-                  {itinerary.map((item, index) => {
-                    const isStructured = typeof item !== "string";
-                    const time = isStructured ? item.time?.trim() || "" : "";
-                    const activity = isStructured ? item.activity?.trim() || "" : item.trim();
-                    const isDayHeading =
-                      !time && /^day\s*\d+/i.test(activity);
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={downloadItinerary}
+                        disabled={isDownloadingPdf}
+                        className="rounded-full border border-[#17251d]/15 bg-white px-4 py-2.5 text-xs font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {isDownloadingPdf ? "Preparing PDF..." : "↓ Download PDF"}
+                      </button>
 
-                    if (isDayHeading) {
+                      
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {itinerary.map((item, index) => {
+                      const isStructured =
+                        typeof item !== "string" && "activity" in item;
+                      const time = isStructured
+                        ? item.time?.trim() || ""
+                        : "";
+                      const activity =
+                        typeof item === "string"
+                          ? item.trim()
+                          : isStructured
+                            ? item.activity?.trim() || ""
+                            : "";
+                      const isDayHeading =
+                        !time && /^day\s*\d+/i.test(activity);
+
+                      if (!activity) return null;
+
+                      if (isDayHeading) {
+                        return (
+                          <div
+                            key={`${activity}-${index}`}
+                            className="pt-3 first:pt-0"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="h-px flex-1 bg-[#17251d]/10" />
+                              <p className="shrink-0 text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
+                                {activity}
+                              </p>
+                              <span className="h-px flex-1 bg-[#17251d]/10" />
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div
                           key={`${activity}-${index}`}
-                          className="pt-3 first:pt-0"
+                          className="grid gap-3 rounded-2xl bg-[#f7f5f2] p-4 sm:grid-cols-[120px_1fr] sm:items-center"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="h-px flex-1 bg-[#17251d]/10" />
-                            <p className="shrink-0 text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
-                              {activity}
-                            </p>
-                            <span className="h-px flex-1 bg-[#17251d]/10" />
+                          <div>
+                            {time ? (
+                              <span className="inline-flex rounded-full bg-[#17251d] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+                                {time}
+                              </span>
+                            ) : (
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#17251d] text-xs font-bold text-white">
+                                {index + 1}
+                              </span>
+                            )}
                           </div>
+
+                          <p className="text-base font-medium leading-6 text-[#17251d]">
+                            {activity}
+                          </p>
                         </div>
                       );
-                    }
-
-                    return (
-                      <div
-                        key={`${activity}-${index}`}
-                        className="grid gap-3 rounded-2xl bg-[#f7f5f2] p-4 sm:grid-cols-[120px_1fr] sm:items-center"
-                      >
-                        <div>
-                          {time ? (
-                            <span className="inline-flex rounded-full bg-[#17251d] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-                              {time}
-                            </span>
-                          ) : (
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#17251d] text-xs font-bold text-white">
-                              {index + 1}
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-base font-medium leading-6 text-[#17251d]">
-                          {activity}
-                        </p>
-                      </div>
-                    );
-                  })}
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Pickup */}
@@ -894,6 +1737,7 @@ const displayAvailableSeats = displayBatch
             </div>
 
             {/* INCLUDED */}
+            {!hasDayWiseItinerary && (
             <div className="rounded-[28px] border border-black/10 bg-white p-8">
               <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
                 Included
@@ -908,8 +1752,10 @@ const displayAvailableSeats = displayBatch
                 ))}
               </ul>
             </div>
+            )}
 
             {/* NOT INCLUDED */}
+            {!hasDayWiseItinerary && (
             <div className="rounded-[28px] border border-black/10 bg-white p-8">
               <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
                 Not included
@@ -924,6 +1770,7 @@ const displayAvailableSeats = displayBatch
                 ))}
               </ul>
             </div>
+            )}
 
             {/* WHATSAPP FORM */}
             <div className="rounded-[28px] border border-black/10 bg-white p-8">
@@ -1019,6 +1866,7 @@ const displayAvailableSeats = displayBatch
         {/* TRIP FAQS */}
         {faqs.length > 0 && (
           <section
+            data-trip-reveal
             aria-labelledby="trip-faq-heading"
             className="mt-16 overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.04)]"
           >
@@ -1086,7 +1934,7 @@ const displayAvailableSeats = displayBatch
         )}
 
         {/* SIMILAR TRIPS */}
-        <div className="mt-16">
+        <div data-trip-reveal className="mt-16">
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
               <p className="mb-3 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
