@@ -371,6 +371,56 @@ const displayAvailableSeats = displayBatch
   const dayWiseItinerary = itinerary.filter(isDayWiseItineraryItem);
   const hasDayWiseItinerary = dayWiseItinerary.length > 0;
 
+  /*
+   * Automatic route map
+   *
+   * Uses the location already entered for each day-wise itinerary item.
+   * No Maps API key is required. The visual route stays lightweight while
+   * the Google Maps button opens the full multi-stop route externally.
+   */
+  const routeStops = useMemo(() => {
+    const stops = dayWiseItinerary
+      .map((day, index) => ({
+        day: day.day || index + 1,
+        title: day.title?.trim() || `Day ${day.day || index + 1}`,
+        location: day.location?.trim() || "",
+      }))
+      .filter((stop) => stop.location);
+
+    return stops.filter(
+      (stop, index) =>
+        index === 0 ||
+        stop.location.toLowerCase() !== stops[index - 1].location.toLowerCase()
+    );
+  }, [dayWiseItinerary]);
+
+  const googleMapsRouteUrl = useMemo(() => {
+    if (routeStops.length === 0) return "";
+
+    if (routeStops.length === 1) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        routeStops[0].location
+      )}`;
+    }
+
+    const origin = routeStops[0].location;
+    const destination = routeStops[routeStops.length - 1].location;
+    const waypoints = routeStops.slice(1, -1).map((stop) => stop.location);
+
+    const params = new URLSearchParams({
+      api: "1",
+      origin,
+      destination,
+      travelmode: "driving",
+    });
+
+    if (waypoints.length > 0) {
+      params.set("waypoints", waypoints.join("|"));
+    }
+
+    return `https://www.google.com/maps/dir/?${params.toString()}`;
+  }, [routeStops]);
+
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
 
@@ -1299,6 +1349,82 @@ const displayAvailableSeats = displayBatch
                   </article>
                 );
               })}
+            </div>
+          </section>
+        )}
+
+        {hasDayWiseItinerary && routeStops.length > 0 && (
+          <section
+            data-trip-reveal
+            className="mt-8 overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.04)]"
+          >
+            <div className="flex flex-col gap-5 border-b border-black/10 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                  Trip route
+                </p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#17251d] sm:text-3xl">
+                  Your journey at a glance
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5d6862]">
+                  Automatically created from the locations in the day-wise itinerary.
+                </p>
+              </div>
+
+              {googleMapsRouteUrl && (
+                <a
+                  href={googleMapsRouteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#17251d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-500"
+                >
+                  Open route in Google Maps ↗
+                </a>
+              )}
+            </div>
+
+            <div className="p-5 sm:p-8">
+              <div className="overflow-x-auto pb-2">
+                <div
+                  className="relative flex min-w-max items-start px-3 py-7"
+                  style={{
+                    width: `${Math.max(routeStops.length * 190, 720)}px`,
+                  }}
+                >
+                  <div
+                    className="absolute left-[94px] right-[94px] top-[45px] h-[3px] rounded-full bg-[#17251d]/15"
+                    aria-hidden="true"
+                  />
+
+                  {routeStops.map((stop, index) => (
+                    <div
+                      key={`${stop.day}-${stop.location}-${index}`}
+                      className="relative z-10 flex w-[190px] shrink-0 flex-col items-center px-3 text-center"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border-[5px] border-[#f5f3ee] bg-[#17251d] text-xs font-bold text-white shadow-sm">
+                        {index + 1}
+                      </div>
+
+                      <span className="mt-4 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-600">
+                        Day {stop.day}
+                      </span>
+
+                      <h3 className="mt-2 max-w-[165px] text-sm font-bold leading-5 text-[#17251d]">
+                        {stop.location}
+                      </h3>
+
+                      <p className="mt-1 max-w-[165px] text-xs leading-5 text-[#5d6862]">
+                        {stop.title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-2xl bg-[#f7f5f2] px-4 py-3 text-xs leading-5 text-[#5d6862] sm:text-sm">
+                Route shown here is an itinerary overview. Actual roads, transfers and stop
+                order may vary based on local conditions and the final operating plan.
+              </div>
             </div>
           </section>
         )}
