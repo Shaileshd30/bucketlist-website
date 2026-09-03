@@ -29,16 +29,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-  url: `${baseUrl}/himalayan-treks-india`,
-  lastModified: new Date(),
-  changeFrequency: "weekly",
-  priority: 0.9,
-},
+      url: `${baseUrl}/himalayan-treks-india`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
     {
-      url: `${baseUrl}/book`,
+      url: `${baseUrl}/corporate-outings-pune`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/about`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.6,
+      priority: 0.7,
     },
     {
       url: `${baseUrl}/contact`,
@@ -72,6 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const { data, error } = await supabaseAdmin
       .from("trips")
       .select("slug")
+      .eq("archived", false)
       .not("slug", "is", null);
 
     if (error) {
