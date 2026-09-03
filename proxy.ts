@@ -7,14 +7,24 @@ export function proxy(request: NextRequest) {
   // Canonical domain:
   // www.bucketlistadventure.in → bucketlistadventure.in
   //
-  if (request.nextUrl.hostname === "www.bucketlistadventure.in") {
-    const canonicalUrl = request.nextUrl.clone();
+  const forwardedHost = request.headers.get("x-forwarded-host");
+const host = request.headers.get("host");
 
-    canonicalUrl.protocol = "https:";
-    canonicalUrl.hostname = "bucketlistadventure.in";
+const requestHost = (forwardedHost || host || "")
+  .split(",")[0]
+  .trim()
+  .toLowerCase()
+  .split(":")[0];
 
-    return NextResponse.redirect(canonicalUrl, 308);
-  }
+if (requestHost === "www.bucketlistadventure.in") {
+  const canonicalUrl = request.nextUrl.clone();
+
+  canonicalUrl.protocol = "https:";
+  canonicalUrl.hostname = "bucketlistadventure.in";
+  canonicalUrl.port = "";
+
+  return NextResponse.redirect(canonicalUrl, 308);
+}
 
   let decodedPath = pathname;
 
