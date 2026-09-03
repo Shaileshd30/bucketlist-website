@@ -20,10 +20,10 @@ const PAGE_URL = `${BASE_URL}/treks-near-pune`;
 ========================================================= */
 
 export const metadata: Metadata = {
-  title: "Treks Near Pune & Weekend Treks from Pune",
+  title: "Treks Near Pune | Weekend & Monsoon Treks from Pune",
 
   description:
-    "Discover treks near Pune, one-day treks, weekend treks, monsoon adventures, forts and Sahyadri experiences with Bucketlist Adventure. Explore upcoming departures, prices and trip details.",
+    "Discover treks near Pune and trekking experiences from Pune, including one-day, weekend and monsoon treks across the Sahyadris. Explore upcoming departures, prices and trip details.",
 
   alternates: {
     canonical: PAGE_URL,
@@ -31,10 +31,10 @@ export const metadata: Metadata = {
 
   openGraph: {
     title:
-      "Treks Near Pune & Weekend Treks from Pune | Bucketlist Adventure",
+      "Treks Near Pune | Weekend & Monsoon Treks from Pune | Bucketlist Adventure",
 
     description:
-      "Explore upcoming treks near Pune, Sahyadri adventures, one-day treks and weekend trekking experiences with Bucketlist Adventure.",
+      "Explore treks near Pune, weekend treks from Pune, monsoon trails and one-day Sahyadri trekking experiences with Bucketlist Adventure.",
 
     url: PAGE_URL,
 
@@ -49,10 +49,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
 
     title:
-      "Treks Near Pune & Weekend Treks from Pune | Bucketlist Adventure",
+      "Treks Near Pune | Weekend & Monsoon Treks from Pune | Bucketlist Adventure",
 
     description:
-      "Upcoming Pune and Sahyadri treks, weekend adventures and one-day trekking experiences.",
+      "Discover treks near Pune, weekend treks from Pune, one-day Sahyadri trails and seasonal monsoon trekking experiences.",
   },
 
   robots: {
@@ -522,7 +522,7 @@ const faqs = [
     question:
       "Which are the best treks near Pune?",
     answer:
-      "The best trek depends on the season, difficulty level and experience you are looking for. Pune is surrounded by Sahyadri forts, forest trails, waterfalls and monsoon trekking routes, making it possible to choose anything from an easy one-day outing to a more demanding weekend trek.",
+      "The best trekking places near Pune depend on the season, difficulty level and experience you want. The Sahyadris around Pune offer historic forts, forest trails, waterfalls, plateaus and monsoon routes, with options ranging from easy one-day outings to more demanding weekend treks.",
   },
 
   {
@@ -534,16 +534,23 @@ const faqs = [
 
   {
     question:
-      "Are treks near Pune suitable for beginners?",
+      "Are there easy or beginner-friendly treks near Pune?",
     answer:
-      "Several treks around Pune are suitable for beginners, while others involve steep climbs, slippery monsoon terrain or longer walking distances. Always check the difficulty level and itinerary of the specific trek before booking.",
+      "Yes. Several treks near Pune are suitable for beginners, while others involve steep climbs, slippery monsoon terrain or longer walking distances. Check the difficulty, walking time and itinerary of each trek before booking, especially during the monsoon.",
   },
 
   {
     question:
-      "What is the best season for trekking near Pune?",
+      "What is the best season for trekking and monsoon treks near Pune?",
     answer:
-      "Monsoon is particularly popular for waterfalls, forests and green Sahyadri landscapes. Post-monsoon and winter are excellent for forts, clear views and comfortable trekking conditions. Some routes may be seasonal depending on weather and local conditions.",
+      "Monsoon is especially popular for green Sahyadri landscapes, waterfalls and forest trails, while post-monsoon and winter are excellent for forts, clearer views and comfortable trekking conditions. Easy monsoon treks near Pune can still involve wet and slippery terrain, so route conditions and difficulty should always be checked before booking.",
+  },
+
+  {
+    question:
+      "Are there trekking places near Pune within 100 km?",
+    answer:
+      "Yes. Pune has access to many Sahyadri forts, hills, forest trails and seasonal routes within roughly 100 km, although actual road distance and travel time vary by starting point and route. Check each listed trek for its pickup plan, itinerary and current departure details.",
   },
 
   {
@@ -740,11 +747,12 @@ export default async function TreksNearPunePage() {
           </h1>
 
           <p className="mt-7 max-w-3xl text-base leading-8 text-white/65 sm:text-lg">
-            Escape the city and explore
-            Sahyadri forts, monsoon trails,
+            Discover treks near Pune and escape
+            into Sahyadri forts, monsoon trails,
             waterfalls, forests and mountain
-            routes with thoughtfully planned
-            trekking experiences from Pune.
+            routes. Our trekking experiences from
+            Pune include one-day and weekend
+            adventures for different experience levels.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
@@ -821,37 +829,38 @@ export default async function TreksNearPunePage() {
             </p>
 
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-              The Sahyadris make
-              weekends better.
+              Trekking near Pune
+              starts in the Sahyadris.
             </h2>
           </div>
 
           <div className="space-y-5 text-[15px] leading-8 text-[#5d6862] sm:text-base">
 
             <p>
-              Pune is surrounded by some of
-              Maharashtra&apos;s most memorable
-              trekking terrain — historic forts,
-              forest trails, high plateaus,
-              waterfalls and dramatic monsoon
-              landscapes.
+              Some of the best trekking places near
+              Pune are found across the Sahyadris —
+              historic forts, forest trails, high
+              plateaus, waterfalls and dramatic
+              monsoon landscapes within road-trip
+              distance of the city.
             </p>
 
             <p>
-              Whether you&apos;re planning your
-              first trek or looking for your next
-              weekend challenge, Bucketlist
-              Adventure helps take care of the
-              route planning, coordination,
-              transport and on-ground experience
+              Whether you&apos;re searching for an
+              easy trek near Pune, a monsoon trail
+              or a more challenging weekend trek
+              from Pune, Bucketlist Adventure helps
+              with route planning, coordination,
+              transport and the on-ground experience
               so you can focus on the journey.
             </p>
 
             <p>
-              Browse the available treks below
-              for upcoming departure dates,
+              Browse our current Pune trekking
+              departures below and compare dates,
               difficulty, duration, pricing,
-              inclusions and booking information.
+              inclusions and booking information
+              before choosing the trail that suits you.
             </p>
 
           </div>
@@ -876,7 +885,7 @@ export default async function TreksNearPunePage() {
               </p>
 
               <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                Treks from Pune
+                Upcoming treks from Pune
               </h2>
             </div>
 
@@ -1189,9 +1198,10 @@ export default async function TreksNearPunePage() {
               </h2>
 
               <p className="mt-5 max-w-md text-sm leading-7 text-[#5d6862]">
-                A few useful things to know
-                before choosing your next Pune
-                or Sahyadri trek.
+                Useful answers for planning treks
+                near Pune, weekend departures,
+                beginner trails and seasonal
+                Sahyadri trekking experiences.
               </p>
             </div>
 
