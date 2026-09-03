@@ -370,7 +370,7 @@ const deleteBatch = (batchId: string) => {
   };
 
   const updateListField = (
-    field: "itinerary" | "includes" | "notIncludes" | "pickupPoints" | "thingsToCarry" | "medicalDisclaimer" | "rules",
+    field: "includes" | "notIncludes" | "pickupPoints" | "thingsToCarry" | "medicalDisclaimer" | "rules",
     value: string
   ) => {
     setStatus(null);
@@ -384,6 +384,83 @@ const deleteBatch = (batchId: string) => {
                 .split(/\n|,/)
                 .map((entry) => entry.trim())
                 .filter(Boolean),
+            }
+          : item
+      )
+    );
+  };
+
+  const normalizeItineraryItem = (
+    entry: TripData["itinerary"][number]
+  ): { time: string; activity: string } =>
+    typeof entry === "string"
+      ? { time: "", activity: entry }
+      : {
+          time: entry.time || "",
+          activity: entry.activity || "",
+        };
+
+  const updateItineraryItem = (
+    index: number,
+    field: "time" | "activity",
+    value: string
+  ) => {
+    setStatus(null);
+    setSiteSynced(false);
+
+    setTrips((current) =>
+      current.map((item) => {
+        if (item.slug !== selectedSlug) return item;
+
+        return {
+          ...item,
+          itinerary: (item.itinerary || []).map((entry, entryIndex) => {
+            const normalized = normalizeItineraryItem(entry);
+
+            if (entryIndex !== index) {
+              return normalized;
+            }
+
+            return field === "time"
+              ? { ...normalized, time: value }
+              : { ...normalized, activity: value };
+          }),
+        };
+      })
+    );
+  };
+
+  const addItineraryItem = () => {
+    setStatus(null);
+    setSiteSynced(false);
+
+    setTrips((current) =>
+      current.map((item) =>
+        item.slug === selectedSlug
+          ? {
+              ...item,
+              itinerary: [
+                ...(item.itinerary || []).map(normalizeItineraryItem),
+                { time: "", activity: "" },
+              ],
+            }
+          : item
+      )
+    );
+  };
+
+  const deleteItineraryItem = (index: number) => {
+    setStatus(null);
+    setSiteSynced(false);
+
+    setTrips((current) =>
+      current.map((item) =>
+        item.slug === selectedSlug
+          ? {
+              ...item,
+              itinerary: (item.itinerary || [])
+                .filter((_, entryIndex) => entryIndex !== index)
+                .map(normalizeItineraryItem),
             }
           : item
       )
@@ -426,7 +503,10 @@ const deleteBatch = (batchId: string) => {
         "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
 
       itinerary: [
-        "Add itinerary details here",
+        {
+          time: "",
+          activity: "Add itinerary details here",
+        },
       ],
 
       includes: [
@@ -548,7 +628,14 @@ const deleteBatch = (batchId: string) => {
     if (!trip.summary?.trim() || trip.summary.trim() === "Write a short overview for this trip.") validationErrors.push("Add a trip summary.");
     if (!overview || overview === "Describe the experience, route, and highlights for travelers here.") validationErrors.push("Add the trip overview.");
     if (!trip.image?.trim()) validationErrors.push("Add a main trip image.");
-    if (!trip.itinerary?.length || trip.itinerary.includes("Add itinerary details here")) validationErrors.push("Add the trip itinerary.");
+    const hasValidItinerary = (trip.itinerary || []).some((entry) => {
+      const normalized = normalizeItineraryItem(entry);
+      return (
+        normalized.activity.trim().length > 0 &&
+        normalized.activity.trim() !== "Add itinerary details here"
+      );
+    });
+    if (!hasValidItinerary) validationErrors.push("Add the trip itinerary.");
     if (!trip.includes?.length || trip.includes.includes("Add inclusions here")) validationErrors.push("Add trip inclusions.");
     if (!trip.notIncludes?.length || trip.notIncludes.includes("Add exclusions here")) validationErrors.push("Add trip exclusions.");
 
@@ -1408,15 +1495,77 @@ const deleteBatch = (batchId: string) => {
             />
           </label>
 
-          <label className="mt-5 block space-y-2 text-sm font-medium text-[#17251d]">
-            <span>Itinerary</span>
-            <textarea
-              value={(trip.itinerary || []).join("\n")}
-              onChange={(event) => updateListField("itinerary", event.target.value)}
-              rows={6}
-              className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-            />
-          </label>
+          <div className="mt-5 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="text-sm font-medium text-[#17251d]">Itinerary</span>
+                <p className="mt-1 text-xs leading-5 text-[#718078]">
+                  Add a time and activity for each itinerary step. Leave the time blank for headings such as Day 1 or Day 2.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={addItineraryItem}
+                className="inline-flex items-center justify-center rounded-full bg-[#17251d] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-500"
+              >
+                + Add activity
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {(trip.itinerary || []).map((entry, index) => {
+                const itineraryItem = normalizeItineraryItem(entry);
+
+                return (
+                  <div
+                    key={`${index}-${itineraryItem.activity}`}
+                    className="grid gap-3 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[180px_1fr_auto] md:items-end"
+                  >
+                    <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+                      <span>Time</span>
+                      <input
+                        type="text"
+                        value={itineraryItem.time}
+                        onChange={(event) =>
+                          updateItineraryItem(index, "time", event.target.value)
+                        }
+                        placeholder="Example: 06:00 AM"
+                        className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                      />
+                    </label>
+
+                    <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+                      <span>Activity</span>
+                      <input
+                        type="text"
+                        value={itineraryItem.activity}
+                        onChange={(event) =>
+                          updateItineraryItem(index, "activity", event.target.value)
+                        }
+                        placeholder="Example: Departure from Pune"
+                        className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteItineraryItem(index)}
+                      className="h-[50px] rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                );
+              })}
+
+              {(trip.itinerary || []).length === 0 && (
+                <div className="rounded-2xl border border-dashed border-black/15 bg-white p-6 text-center text-sm text-[#5d6862]">
+                  No itinerary activities yet. Select “Add activity” to create the first one.
+                </div>
+              )}
+            </div>
+          </div>
 
           <label className="mt-5 block space-y-2 text-sm font-medium text-[#17251d]">
             <span>Included</span>

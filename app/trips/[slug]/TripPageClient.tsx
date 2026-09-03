@@ -543,26 +543,55 @@ const displayAvailableSeats = displayBatch
                   Itinerary
                 </p>
 
-                <ol className="space-y-4">
-                  {itinerary.map((item, index) => (
-                    <li
-                      key={`${
-                        typeof item === "string"
-                          ? item
-                          : item.activity
-                      }-${index}`}
-                      className="flex gap-4 rounded-2xl bg-[#f7f5f2] p-4"
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#17251d] text-xs font-bold text-white">
-                        {index + 1}
-                      </span>
+                <div className="space-y-4">
+                  {itinerary.map((item, index) => {
+                    const isStructured = typeof item !== "string";
+                    const time = isStructured ? item.time?.trim() || "" : "";
+                    const activity = isStructured ? item.activity?.trim() || "" : item.trim();
+                    const isDayHeading =
+                      !time && /^day\s*\d+/i.test(activity);
 
-                      <p className="text-[#17251d]">
-                        {renderItineraryItem(item)}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
+                    if (isDayHeading) {
+                      return (
+                        <div
+                          key={`${activity}-${index}`}
+                          className="pt-3 first:pt-0"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="h-px flex-1 bg-[#17251d]/10" />
+                            <p className="shrink-0 text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
+                              {activity}
+                            </p>
+                            <span className="h-px flex-1 bg-[#17251d]/10" />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={`${activity}-${index}`}
+                        className="grid gap-3 rounded-2xl bg-[#f7f5f2] p-4 sm:grid-cols-[120px_1fr] sm:items-center"
+                      >
+                        <div>
+                          {time ? (
+                            <span className="inline-flex rounded-full bg-[#17251d] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+                              {time}
+                            </span>
+                          ) : (
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#17251d] text-xs font-bold text-white">
+                              {index + 1}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-base font-medium leading-6 text-[#17251d]">
+                          {activity}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
