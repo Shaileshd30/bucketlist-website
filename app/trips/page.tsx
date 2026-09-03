@@ -518,7 +518,12 @@ function createStructuredData(
 export default async function TripsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    q?: string;
+    destination?: string;
+    sort?: string;
+  }>;
 }) {
   const trips =
     await getTrips();
@@ -537,11 +542,135 @@ export default async function TripsPage({
       ? (requestedCategory as (typeof travelCategories)[number])
       : null;
 
+  const searchQuery =
+    typeof params.q === "string"
+      ? params.q.trim()
+      : "";
+
+  const requestedDestination =
+    typeof params.destination === "string"
+      ? decodeURIComponent(params.destination).trim()
+      : "";
+
+  const sort =
+    params.sort === "price-low" ||
+    params.sort === "price-high" ||
+    params.sort === "name"
+      ? params.sort
+      : "upcoming";
+
+  const categoryScopedTrips = activeCategory
+    ? trips.filter(
+        (trip) =>
+          trip.travelCategory === activeCategory
+      )
+    : trips;
+
+  const destinations = Array.from(
+    new Set(
+      categoryScopedTrips
+        .map(
+          (trip) =>
+            trip.destination ||
+            trip.startPoint ||
+            ""
+        )
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const normalizedQuery =
+    searchQuery.toLowerCase();
+
+  const filteredTrips = categoryScopedTrips.filter(
+    (trip) => {
+      const destination =
+        trip.destination ||
+        trip.startPoint ||
+        "";
+
+      const matchesDestination =
+        !requestedDestination ||
+        destination === requestedDestination;
+
+      const searchableText = [
+        trip.title,
+        trip.subtitle,
+        trip.summary,
+        trip.destination,
+        trip.startPoint,
+        trip.travelCategory,
+        trip.category,
+        trip.difficulty,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch =
+        !normalizedQuery ||
+        searchableText.includes(normalizedQuery);
+
+      return matchesDestination && matchesSearch;
+    }
+  );
+
+  const getSortablePrice = (trip: TripData) => {
+    const batch = getNextBatch(trip);
+    return batch
+      ? Number(batch.price)
+      : Number.POSITIVE_INFINITY;
+  };
+
+  const getSortableDate = (trip: TripData) => {
+    const batch = getNextBatch(trip);
+    return batch
+      ? new Date(batch.departureDate).getTime()
+      : Number.POSITIVE_INFINITY;
+  };
+
+  const sortedTrips = [...filteredTrips].sort(
+    (a, b) => {
+      if (sort === "price-low") {
+        return (
+          getSortablePrice(a) -
+          getSortablePrice(b)
+        );
+      }
+
+      if (sort === "price-high") {
+        const aPrice = getSortablePrice(a);
+        const bPrice = getSortablePrice(b);
+
+        if (
+          !Number.isFinite(aPrice) &&
+          !Number.isFinite(bPrice)
+        ) {
+          return a.title.localeCompare(b.title);
+        }
+
+        if (!Number.isFinite(aPrice)) return 1;
+        if (!Number.isFinite(bPrice)) return -1;
+
+        return bPrice - aPrice;
+      }
+
+      if (sort === "name") {
+        return a.title.localeCompare(b.title);
+      }
+
+      return (
+        getSortableDate(a) -
+        getSortableDate(b)
+      );
+    }
+  );
+
   const groupedTrips =
     travelCategories.reduce(
       (acc, category) => {
         acc[category] =
-          trips.filter(
+          sortedTrips.filter(
             (trip) =>
               trip.travelCategory ===
               category
@@ -562,18 +691,43 @@ export default async function TripsPage({
         )
       : travelCategories;
 
-  const visibleTrips =
-    activeCategory
-      ? trips.filter(
-          (trip) =>
-            trip.travelCategory === activeCategory
-        )
-      : trips;
-
   const structuredData =
-    createStructuredData(
-      visibleTrips
+    createStructuredData(sortedTrips);
+
+  const hasDiscoveryFilters =
+    Boolean(
+      searchQuery ||
+      requestedDestination ||
+      sort !== "upcoming"
     );
+
+  const buildCategoryHref = (
+    category?: string | null
+  ) => {
+    const search = new URLSearchParams();
+
+    if (category) {
+      search.set("category", category);
+    }
+
+    if (searchQuery) {
+      search.set("q", searchQuery);
+    }
+
+    if (requestedDestination) {
+      search.set(
+        "destination",
+        requestedDestination
+      );
+    }
+
+    if (sort !== "upcoming") {
+      search.set("sort", sort);
+    }
+
+    const query = search.toString();
+    return query ? `/trips?${query}` : "/trips";
+  };
 
   return (
     <main className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
@@ -660,32 +814,129 @@ export default async function TripsPage({
 </div>
 
         {/* QUICK DISCOVERY / FILTERS */}
-        <div className="mb-14 flex flex-wrap gap-3">
+        <section className="mb-14 overflow-hidden rounded-[30px] border border-black/10 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.045)]">
+          <div className="border-b border-black/10 p-5 sm:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">
+                  Find your journey
+                </p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Where do you want to go next?
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b756f]">
+                  Search by trip or destination, then narrow the collection to what suits you.
+                </p>
+              </div>
 
-          <Link
-            href="/trips"
-            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-              !activeCategory
-                ? "border-[#17251d] bg-[#17251d] text-white"
-                : "border-black/10 bg-white text-[#17251d] hover:border-orange-400 hover:text-orange-500"
-            }`}
+              <p className="text-sm font-semibold text-[#17251d]/60">
+                {sortedTrips.length}{" "}
+                {sortedTrips.length === 1 ? "trip" : "trips"} found
+              </p>
+            </div>
+          </div>
+
+          <form
+            action="/trips"
+            method="get"
+            className="grid gap-3 p-5 sm:p-7 lg:grid-cols-[1.5fr_1fr_1fr_auto]"
           >
-            All Trips
-            <span className={`ml-2 ${!activeCategory ? "text-white/60" : "text-[#17251d]/40"}`}>
-              {trips.length}
-            </span>
-          </Link>
+            {activeCategory && (
+              <input
+                type="hidden"
+                name="category"
+                value={activeCategory}
+              />
+            )}
 
-          {travelCategories.map(
-            (category) => {
-              const count =
-                groupedTrips[
-                  category
-                ]?.length || 0;
+            <label className="block">
+              <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/55">
+                Search
+              </span>
+              <input
+                type="search"
+                name="q"
+                defaultValue={searchQuery}
+                placeholder="Dubai, Ladakh, waterfall..."
+                className="h-12 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 text-sm text-[#17251d] outline-none transition placeholder:text-[#17251d]/35 focus:border-orange-400 focus:bg-white"
+              />
+            </label>
 
-              if (count === 0) {
-                return null;
-              }
+            <label className="block">
+              <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/55">
+                Destination
+              </span>
+              <select
+                name="destination"
+                defaultValue={requestedDestination}
+                className="h-12 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 text-sm font-medium text-[#17251d] outline-none transition focus:border-orange-400 focus:bg-white"
+              >
+                <option value="">All destinations</option>
+                {destinations.map((destination) => (
+                  <option
+                    key={destination}
+                    value={destination}
+                  >
+                    {destination}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/55">
+                Sort by
+              </span>
+              <select
+                name="sort"
+                defaultValue={sort}
+                className="h-12 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 text-sm font-medium text-[#17251d] outline-none transition focus:border-orange-400 focus:bg-white"
+              >
+                <option value="upcoming">
+                  Upcoming first
+                </option>
+                <option value="price-low">
+                  Price: Low to High
+                </option>
+                <option value="price-high">
+                  Price: High to Low
+                </option>
+                <option value="name">
+                  Trip name: A–Z
+                </option>
+              </select>
+            </label>
+
+            <button
+              type="submit"
+              className="mt-auto inline-flex h-12 items-center justify-center rounded-2xl bg-[#17251d] px-6 text-sm font-bold text-white transition hover:bg-orange-500"
+            >
+              Find Trips
+            </button>
+          </form>
+
+          <div className="flex flex-wrap gap-2 border-t border-black/10 px-5 py-4 sm:px-7">
+            <Link
+              href={buildCategoryHref(null)}
+              className={`rounded-full border px-4 py-2 text-xs font-bold transition ${
+                !activeCategory
+                  ? "border-[#17251d] bg-[#17251d] text-white"
+                  : "border-black/10 bg-white text-[#17251d] hover:border-orange-400 hover:text-orange-500"
+              }`}
+            >
+              All Trips
+              <span className={`ml-2 ${!activeCategory ? "text-white/60" : "text-[#17251d]/40"}`}>
+                {trips.length}
+              </span>
+            </Link>
+
+            {travelCategories.map((category) => {
+              const count = trips.filter(
+                (trip) =>
+                  trip.travelCategory === category
+              ).length;
+
+              if (count === 0) return null;
 
               const isActive =
                 activeCategory === category;
@@ -693,8 +944,8 @@ export default async function TripsPage({
               return (
                 <Link
                   key={category}
-                  href={`/trips?category=${encodeURIComponent(category)}`}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  href={buildCategoryHref(category)}
+                  className={`rounded-full border px-4 py-2 text-xs font-bold transition ${
                     isActive
                       ? "border-[#17251d] bg-[#17251d] text-white"
                       : "border-black/10 bg-white text-[#17251d] hover:border-orange-400 hover:text-orange-500"
@@ -706,10 +957,39 @@ export default async function TripsPage({
                   </span>
                 </Link>
               );
-            }
-          )}
+            })}
 
-        </div>
+            {hasDiscoveryFilters && (
+              <Link
+                href={
+                  activeCategory
+                    ? `/trips?category=${encodeURIComponent(activeCategory)}`
+                    : "/trips"
+                }
+                className="rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold text-orange-600 transition hover:bg-orange-100"
+              >
+                Clear search & filters ×
+              </Link>
+            )}
+          </div>
+        </section>
+
+        {sortedTrips.length === 0 && (
+          <div className="mb-14 rounded-[28px] border border-black/10 bg-white p-8 text-center shadow-[0_20px_50px_rgba(0,0,0,0.04)] sm:p-10">
+            <p className="text-xl font-bold text-[#17251d]">
+              No trips match those filters.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#718078]">
+              Try another destination or search term, or browse the full collection.
+            </p>
+            <Link
+              href="/trips"
+              className="mt-6 inline-flex rounded-full bg-[#17251d] px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-500"
+            >
+              View all trips
+            </Link>
+          </div>
+        )}
 
         {/* CATEGORIES */}
         <div className="space-y-16">
