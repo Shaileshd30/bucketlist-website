@@ -570,249 +570,429 @@ const displayAvailableSeats = displayBatch
 
       const marginX = 15;
       const contentWidth = pageWidth - marginX * 2;
-      const footerHeight = 18;
-      const bottomLimit = pageHeight - footerHeight - 8;
+      const bottomLimit = pageHeight - 20;
 
       const dark = [23, 37, 29] as const;
       const orange = [242, 140, 40] as const;
       const muted = [93, 104, 98] as const;
       const soft = [247, 245, 242] as const;
-      const lightBorder = [224, 226, 224] as const;
+      const border = [225, 225, 222] as const;
+      const greenSoft = [238, 244, 239] as const;
 
       const logoData = await pdfAssetToDataUrl(pdfLogo);
+      const heroData = primaryImage
+        ? await pdfAssetToDataUrl(primaryImage)
+        : null;
 
-      const addFooter = () => {
-        pdf.setDrawColor(...lightBorder);
-        pdf.line(marginX, pageHeight - footerHeight, pageWidth - marginX, pageHeight - footerHeight);
+      const drawBrandHeader = (compact = false) => {
+        const top = compact ? 9 : 11;
 
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(7.5);
-        pdf.setTextColor(...dark);
-        pdf.text("Bucketlist Adventure", marginX, pageHeight - 11);
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setTextColor(...muted);
-        pdf.text(
-          "WhatsApp: +91 92255 31257  |  Contact: +91 84828 46287",
-          marginX,
-          pageHeight - 7
-        );
-
-        pdf.text(
-          "bucketlistdestinations2@gmail.com  |  bucketlistadventure.in",
-          marginX,
-          pageHeight - 3.5
-        );
-
-        pdf.setFontSize(7);
-        pdf.text(
-          `${pdf.getCurrentPageInfo().pageNumber}`,
-          pageWidth - marginX,
-          pageHeight - 3.5,
-          { align: "right" }
-        );
-      };
-
-      const addBrandHeader = () => {
         if (logoData) {
           try {
             pdf.addImage(
               logoData,
               pdfImageFormat(logoData),
               marginX,
-              12,
-              32,
-              17,
+              top,
+              compact ? 27 : 31,
+              compact ? 14 : 16.5,
               undefined,
               "FAST"
             );
           } catch {
-            // Continue without logo if the browser/PDF engine cannot decode it.
+            // Continue without the logo if the browser cannot decode it.
           }
         }
 
-        const brandX = logoData ? marginX + 38 : marginX;
+        const brandX = logoData ? marginX + (compact ? 32 : 37) : marginX;
 
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.setTextColor(...orange);
-        pdf.text("BUCKETLIST ADVENTURE", brandX, 18);
+        pdf.setFontSize(compact ? 10.5 : 12);
+        pdf.setTextColor(...dark);
+        pdf.text("Bucketlist Adventure", brandX, top + 5.5);
 
         pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...orange);
+        pdf.text("We Plan It. You Live It.", brandX, top + 10.3);
+
+        pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8.5);
         pdf.setTextColor(...dark);
-        pdf.text("We Plan It. You Live It.", brandX, 23);
+        pdf.text(
+          hasDayWiseItinerary ? "TRAVEL ITINERARY" : "TRIP ITINERARY",
+          pageWidth - marginX,
+          top + 5.5,
+          { align: "right" }
+        );
 
-        const contactX = pageWidth - marginX;
+        pdf.setDrawColor(...orange);
+        pdf.setLineWidth(0.6);
+        pdf.line(
+          marginX,
+          compact ? 28 : 31,
+          pageWidth - marginX,
+          compact ? 28 : 31
+        );
+      };
 
-        pdf.setFontSize(7.4);
+      const drawFooter = (pageNumber: number) => {
+        const footerY = pageHeight - 13;
+
+        pdf.setDrawColor(...border);
+        pdf.setLineWidth(0.25);
+        pdf.line(marginX, footerY - 5, pageWidth - marginX, footerY - 5);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7.2);
         pdf.setTextColor(...dark);
-        pdf.text("+91 92255 31257", contactX, 14, { align: "right" });
-        pdf.text("+91 84828 46287", contactX, 18, { align: "right" });
-        pdf.text("bucketlistdestinations2@gmail.com", contactX, 22, {
+        pdf.text("Bucketlist Adventure", marginX, footerY);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(6.8);
+        pdf.setTextColor(...muted);
+        pdf.text(
+          "WhatsApp: +91 92255 31257  |  Contact: +91 84828 46287",
+          marginX,
+          footerY + 4
+        );
+        pdf.text(
+          "bucketlistdestinations2@gmail.com  |  bucketlistadventure.in",
+          marginX,
+          footerY + 8
+        );
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7);
+        pdf.setTextColor(...dark);
+        pdf.text(String(pageNumber), pageWidth - marginX, footerY + 8, {
           align: "right",
         });
-        pdf.text("bucketlistadventure.in", contactX, 26, { align: "right" });
-
-        pdf.setDrawColor(...lightBorder);
-        pdf.line(marginX, 32, pageWidth - marginX, 32);
       };
 
-      const addNewPage = () => {
-        addFooter();
+      const addContentPage = () => {
         pdf.addPage();
-        addBrandHeader();
-        return 39;
+        drawBrandHeader(true);
+        return 36;
       };
 
-      addBrandHeader();
+      const ensureSpace = (y: number, required: number) => {
+        if (y + required <= bottomLimit) return y;
+        return addContentPage();
+      };
 
-      let y = 43;
+      const drawSectionTitle = (
+        title: string,
+        subtitle: string | undefined,
+        y: number
+      ) => {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10);
+        pdf.setTextColor(...orange);
+        pdf.text(title.toUpperCase(), marginX, y);
+
+        if (subtitle) {
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(7.6);
+          pdf.setTextColor(...muted);
+          pdf.text(subtitle, pageWidth - marginX, y, { align: "right" });
+        }
+
+        return y + 7;
+      };
+
+      // PAGE 1 — brochure-style introduction
+      drawBrandHeader();
+
+      let y = 42;
+
+      pdf.setFillColor(...dark);
+      pdf.roundedRect(marginX, y, contentWidth, 23, 3, 3, "F");
 
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(24);
-      pdf.setTextColor(...dark);
-      pdf.text(trip.title, marginX, y);
-      y += 8;
+      pdf.setFontSize(19);
+      pdf.setTextColor(255, 255, 255);
+
+      const titleLines = pdf.splitTextToSize(trip.title, contentWidth - 12);
+      pdf.text(titleLines.slice(0, 2), marginX + 6, y + 9);
 
       if (trip.subtitle) {
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        pdf.setTextColor(...muted);
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(235, 238, 235);
 
-        const subtitleLines = pdf.splitTextToSize(trip.subtitle, contentWidth);
-        pdf.text(subtitleLines, marginX, y);
-        y += subtitleLines.length * 5 + 4;
+        const subtitleLines = pdf.splitTextToSize(
+          trip.subtitle,
+          contentWidth - 12
+        );
+        pdf.text(
+          subtitleLines.slice(0, 1),
+          marginX + 6,
+          y + 18
+        );
       }
 
-      const metaItems = [
-        displayDuration ? `Duration: ${displayDuration}` : "",
-        trip.destination ? `Destination: ${trip.destination}` : "",
-        trip.startPoint ? `Start point: ${trip.startPoint}` : "",
-      ].filter(Boolean);
+      y += 30;
 
-      if (metaItems.length) {
+      const meta = [
+        {
+          label: "DURATION",
+          value: displayDuration,
+        },
+        {
+          label: "DESTINATION",
+          value: trip.destination || trip.startPoint || "To be confirmed",
+        },
+        {
+          label: "NEXT DEPARTURE",
+          value: displayBatch
+            ? formatDate(displayBatch.departureDate)
+            : "On request",
+        },
+        {
+          label: "TRIP TYPE",
+          value: trip.travelCategory || trip.tripType || "Adventure",
+        },
+      ];
+
+      const gap = 2.5;
+      const metaWidth = (contentWidth - gap * 3) / 4;
+
+      meta.forEach((item, index) => {
+        const x = marginX + index * (metaWidth + gap);
+
         pdf.setFillColor(...soft);
-        pdf.roundedRect(marginX, y, contentWidth, 12, 3, 3, "F");
+        pdf.setDrawColor(...border);
+        pdf.roundedRect(x, y, metaWidth, 20, 2.5, 2.5, "FD");
 
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8.2);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(6);
+        pdf.setTextColor(...orange);
+        pdf.text(item.label, x + 3, y + 6);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7.5);
         pdf.setTextColor(...dark);
-        pdf.text(metaItems.join("   •   "), marginX + 4, y + 7.2);
 
-        y += 17;
+        const valueLines = pdf.splitTextToSize(item.value, metaWidth - 6);
+        pdf.text(valueLines.slice(0, 2), x + 3, y + 11.5);
+      });
+
+      y += 28;
+
+      y = drawSectionTitle("Overview", undefined, y);
+
+      const overviewText =
+        overview ||
+        trip.summary ||
+        "A thoughtfully planned Bucketlist Adventure experience.";
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(...muted);
+
+      const overviewLines = pdf.splitTextToSize(
+        overviewText,
+        contentWidth
+      );
+
+      const maxOverviewLines = heroData ? 7 : 12;
+      const visibleOverview = overviewLines.slice(0, maxOverviewLines);
+
+      pdf.text(visibleOverview, marginX, y);
+      y += visibleOverview.length * 4.7 + 5;
+
+      if (heroData) {
+        const imageHeight = Math.min(73, bottomLimit - y);
+
+        if (imageHeight >= 38) {
+          try {
+            pdf.addImage(
+              heroData,
+              pdfImageFormat(heroData),
+              marginX,
+              y,
+              contentWidth,
+              imageHeight,
+              undefined,
+              "FAST"
+            );
+
+            pdf.setDrawColor(...border);
+            pdf.roundedRect(
+              marginX,
+              y,
+              contentWidth,
+              imageHeight,
+              3,
+              3,
+              "D"
+            );
+
+            y += imageHeight + 4;
+          } catch {
+            // Continue without the hero image.
+          }
+        }
       }
 
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.setTextColor(...orange);
-      pdf.text("ITINERARY", marginX, y);
-      y += 7;
+      // PAGE 2+ — compact itinerary layout
+      y = addContentPage();
+      y = drawSectionTitle(
+        "Itinerary overview",
+        hasDayWiseItinerary
+          ? `${dayWiseItinerary.length} day${dayWiseItinerary.length === 1 ? "" : "s"}`
+          : undefined,
+        y
+      );
 
       if (hasDayWiseItinerary) {
         for (let index = 0; index < dayWiseItinerary.length; index += 1) {
           const day = dayWiseItinerary[index];
 
-          const dayTitle = `DAY ${day.day || index + 1}  •  ${day.title}`;
-          const titleLines = pdf.splitTextToSize(dayTitle, contentWidth - 8);
+          const dayLabel = `DAY ${day.day || index + 1}`;
+          const dayTitle = day.title?.trim() || `Day ${day.day || index + 1}`;
+          const location = day.location?.trim() || "";
+
+          const titleWidth = contentWidth - 48;
+          const titleLinesForCard = pdf.splitTextToSize(
+            dayTitle,
+            titleWidth
+          );
 
           const descriptionLines = pdf.splitTextToSize(
             day.description || "",
-            contentWidth - 8
+            contentWidth - 16
           );
 
-          const highlights = day.highlights || [];
-          const highlightLines = highlights.flatMap((highlight) =>
-            pdf
-              .splitTextToSize(`• ${highlight}`, contentWidth - 12)
-              .map((line: string) => line)
-          );
+          const highlightText = (day.highlights || [])
+            .slice(0, 5)
+            .join("  |  ");
+
+          const highlightLines = highlightText
+            ? pdf.splitTextToSize(highlightText, contentWidth - 16)
+            : [];
 
           const imageData = day.image
             ? await pdfAssetToDataUrl(day.image)
             : null;
 
-          const imageHeight = imageData ? 44 : 0;
+          const cardHeight = Math.max(
+            imageData ? 47 : 0,
+            19 +
+              titleLinesForCard.length * 4.6 +
+              (location ? 4.5 : 0) +
+              Math.min(descriptionLines.length, 5) * 4.2 +
+              (highlightLines.length ? Math.min(highlightLines.length, 2) * 4 + 6 : 0)
+          );
 
-          const cardHeight =
-            13 +
-            titleLines.length * 5 +
-            (day.location ? 5 : 0) +
-            Math.max(descriptionLines.length * 4.5, imageHeight) +
-            (highlightLines.length ? highlightLines.length * 4 + 7 : 0) +
-            9;
-
-          if (y + cardHeight > bottomLimit) {
-            y = addNewPage();
-          }
+          y = ensureSpace(y, cardHeight + 5);
 
           const cardTop = y;
 
-          pdf.setDrawColor(...lightBorder);
           pdf.setFillColor(255, 255, 255);
-          pdf.roundedRect(marginX, cardTop, contentWidth, cardHeight, 4, 4, "FD");
-
-          pdf.setFillColor(...dark);
-          pdf.roundedRect(marginX + 4, cardTop + 5, 18, 18, 3, 3, "F");
-
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(6.5);
-          pdf.setTextColor(255, 255, 255);
-          pdf.text("DAY", marginX + 13, cardTop + 10, { align: "center" });
-
-          pdf.setFontSize(12);
-          pdf.text(
-            String(day.day || index + 1),
-            marginX + 13,
-            cardTop + 18,
-            { align: "center" }
+          pdf.setDrawColor(...border);
+          pdf.roundedRect(
+            marginX,
+            cardTop,
+            contentWidth,
+            cardHeight,
+            3,
+            3,
+            "FD"
           );
 
-          const textX = marginX + 27;
-          const textWidth = imageData ? contentWidth - 27 - 58 : contentWidth - 31;
+          pdf.setFillColor(...greenSoft);
+          pdf.roundedRect(
+            marginX + 4,
+            cardTop + 4,
+            24,
+            13,
+            2,
+            2,
+            "F"
+          );
 
           pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(11.5);
+          pdf.setFontSize(7);
+          pdf.setTextColor(...dark);
+          pdf.text(dayLabel, marginX + 16, cardTop + 12.2, {
+            align: "center",
+          });
+
+          const textX = marginX + 33;
+          const imageW = imageData ? 43 : 0;
+          const rightPad = imageData ? imageW + 10 : 6;
+          const innerWidth = contentWidth - 33 - rightPad;
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(10.5);
           pdf.setTextColor(...dark);
 
-          const visibleTitleLines = pdf.splitTextToSize(
-            day.title,
-            textWidth
+          const visibleTitle = pdf.splitTextToSize(
+            dayTitle,
+            innerWidth
           );
+          pdf.text(visibleTitle.slice(0, 2), textX, cardTop + 8.5);
 
-          pdf.text(visibleTitleLines, textX, cardTop + 9);
+          let innerY =
+            cardTop + 8.5 + Math.min(visibleTitle.length, 2) * 4.7;
 
-          let innerY = cardTop + 9 + visibleTitleLines.length * 5;
-
-          if (day.location) {
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(7.8);
+          if (location) {
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(7);
             pdf.setTextColor(...orange);
-            pdf.text(day.location, textX, innerY + 1);
-            innerY += 6;
+            pdf.text(
+              pdf.splitTextToSize(location, innerWidth).slice(0, 1),
+              textX,
+              innerY + 1
+            );
+            innerY += 5.5;
           }
 
           pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(8.4);
+          pdf.setFontSize(7.8);
           pdf.setTextColor(...muted);
 
-          const bodyWidth = imageData ? textWidth : contentWidth - 35;
           const bodyLines = pdf.splitTextToSize(
             day.description || "",
-            bodyWidth
+            innerWidth
           );
 
-          pdf.text(bodyLines, textX, innerY + 2);
+          pdf.text(bodyLines.slice(0, 5), textX, innerY + 1);
+          innerY += Math.min(bodyLines.length, 5) * 4.1 + 3;
+
+          if (day.highlights?.length) {
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(...dark);
+            pdf.text("HIGHLIGHTS", textX, innerY + 1);
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(...muted);
+            pdf.setFontSize(6.8);
+
+            const compactHighlights = pdf.splitTextToSize(
+              day.highlights.slice(0, 5).join("  |  "),
+              innerWidth
+            );
+
+            pdf.text(
+              compactHighlights.slice(0, 2),
+              textX,
+              innerY + 5
+            );
+          }
 
           if (imageData) {
             try {
               pdf.addImage(
                 imageData,
                 pdfImageFormat(imageData),
-                pageWidth - marginX - 54,
-                cardTop + 8,
-                50,
-                44,
+                pageWidth - marginX - imageW - 5,
+                cardTop + 5,
+                imageW,
+                Math.min(cardHeight - 10, 34),
                 undefined,
                 "FAST"
               );
@@ -821,160 +1001,173 @@ const displayAvailableSeats = displayBatch
             }
           }
 
-          const bodyBottom =
-            innerY +
-            2 +
-            bodyLines.length * 4.5;
-
-          let highlightsY = Math.max(bodyBottom + 5, cardTop + 57);
-
-          if (highlights.length) {
-            pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(7.5);
-            pdf.setTextColor(...dark);
-            pdf.text("Highlights", textX, highlightsY);
-            highlightsY += 4.5;
-
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(7.7);
-            pdf.setTextColor(...muted);
-
-            const highlightText = highlights
-              .map((highlight) => `• ${highlight}`)
-              .join("   ");
-
-            const wrappedHighlights = pdf.splitTextToSize(
-              highlightText,
-              contentWidth - 31
-            );
-
-            pdf.text(wrappedHighlights, textX, highlightsY);
-          }
-
           y = cardTop + cardHeight + 5;
         }
       } else {
         for (let index = 0; index < itinerary.length; index += 1) {
           const item = itinerary[index];
 
-          let line = "";
+          let activity = "";
+          let time = "";
 
           if (typeof item === "string") {
-            line = item;
+            activity = item;
           } else if ("activity" in item) {
-            line = `${item.time ? `${item.time} - ` : ""}${item.activity}`;
+            activity = item.activity || "";
+            time = item.time || "";
           }
 
-          if (!line.trim()) continue;
+          if (!activity.trim()) continue;
 
-          const lines = pdf.splitTextToSize(line, contentWidth - 16);
-          const rowHeight = Math.max(12, lines.length * 4.5 + 6);
+          const activityLines = pdf.splitTextToSize(
+            activity,
+            contentWidth - 43
+          );
 
-          if (y + rowHeight > bottomLimit) {
-            y = addNewPage();
-          }
+          const rowHeight = Math.max(
+            11,
+            activityLines.length * 4.2 + 5
+          );
+
+          y = ensureSpace(y, rowHeight + 3);
 
           pdf.setFillColor(...soft);
-          pdf.roundedRect(marginX, y, contentWidth, rowHeight, 3, 3, "F");
-
-          pdf.setFillColor(...dark);
-          pdf.circle(marginX + 6, y + rowHeight / 2, 3, "F");
+          pdf.setDrawColor(...border);
+          pdf.roundedRect(
+            marginX,
+            y,
+            contentWidth,
+            rowHeight,
+            2.5,
+            2.5,
+            "FD"
+          );
 
           pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(6.5);
-          pdf.setTextColor(255, 255, 255);
-          pdf.text(String(index + 1), marginX + 6, y + rowHeight / 2 + 2, {
-            align: "center",
-          });
+          pdf.setFontSize(7);
+          pdf.setTextColor(...orange);
+          pdf.text(
+            time || String(index + 1).padStart(2, "0"),
+            marginX + 5,
+            y + 6.5
+          );
 
           pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(8.5);
+          pdf.setFontSize(8);
           pdf.setTextColor(...dark);
-          pdf.text(lines, marginX + 12, y + 5);
+          pdf.text(activityLines, marginX + 26, y + 5.5);
 
           y += rowHeight + 3;
         }
       }
 
       if (includes.length || excludes.length) {
-        const sectionTop = y + 3;
-
-        if (sectionTop + 45 > bottomLimit) {
-          y = addNewPage();
-        } else {
-          y = sectionTop;
-        }
+        y = ensureSpace(y + 3, 42);
+        y = drawSectionTitle("Package details", undefined, y);
 
         const columnGap = 5;
         const columnWidth = (contentWidth - columnGap) / 2;
 
-        const drawListSection = (
+        const drawCompactList = (
           title: string,
           items: string[],
           x: number,
-          marker: string,
-          markerColor: readonly [number, number, number]
+          marker: string
         ) => {
-          const wrappedItems = items.map((item) =>
-            pdf.splitTextToSize(item, columnWidth - 12)
+          const prepared = items.slice(0, 10).map((item) =>
+            pdf.splitTextToSize(item, columnWidth - 13)
           );
 
           const boxHeight = Math.max(
-            30,
-            14 +
-              wrappedItems.reduce(
-                (sum, lines) => sum + lines.length * 4.1 + 2,
+            28,
+            15 +
+              prepared.reduce(
+                (total, lines) =>
+                  total + Math.min(lines.length, 2) * 4 + 2,
                 0
               )
           );
 
-          pdf.setDrawColor(...lightBorder);
-          pdf.roundedRect(x, y, columnWidth, boxHeight, 4, 4, "D");
+          pdf.setFillColor(...soft);
+          pdf.setDrawColor(...border);
+          pdf.roundedRect(
+            x,
+            y,
+            columnWidth,
+            boxHeight,
+            3,
+            3,
+            "FD"
+          );
 
           pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(9);
+          pdf.setFontSize(8);
           pdf.setTextColor(...orange);
           pdf.text(title, x + 5, y + 8);
 
-          let itemY = y + 15;
+          let itemY = y + 14;
 
-          wrappedItems.forEach((lines) => {
+          prepared.forEach((lines) => {
             pdf.setFont("helvetica", "bold");
-            pdf.setTextColor(...markerColor);
-            pdf.setFontSize(8);
+            pdf.setFontSize(7);
+            pdf.setTextColor(...dark);
             pdf.text(marker, x + 5, itemY);
 
             pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(...dark);
-            pdf.setFontSize(7.8);
-            pdf.text(lines, x + 10, itemY);
+            pdf.setFontSize(7);
+            pdf.setTextColor(...muted);
+            pdf.text(lines.slice(0, 2), x + 10, itemY);
 
-            itemY += lines.length * 4.1 + 2;
+            itemY += Math.min(lines.length, 2) * 4 + 2;
           });
 
           return boxHeight;
         };
 
-        const leftHeight = drawListSection(
+        const leftHeight = drawCompactList(
           "INCLUDED",
           includes,
           marginX,
-          "✓",
-          [27, 122, 71] as const
+          "+"
         );
 
-        const rightHeight = drawListSection(
+        const rightHeight = drawCompactList(
           "NOT INCLUDED",
           excludes,
           marginX + columnWidth + columnGap,
-          "–",
-          [190, 38, 38] as const
+          "-"
         );
 
         y += Math.max(leftHeight, rightHeight) + 6;
       }
 
-      addFooter();
+      y = ensureSpace(y + 2, 18);
+
+      pdf.setFillColor(255, 247, 237);
+      pdf.setDrawColor(253, 186, 116);
+      pdf.roundedRect(marginX, y, contentWidth, 14, 2.5, 2.5, "FD");
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(...orange);
+      pdf.text("NOTE", marginX + 5, y + 8.6);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.4);
+      pdf.setTextColor(...dark);
+      pdf.text(
+        "The final operating itinerary may vary slightly due to weather, local conditions or operational requirements.",
+        marginX + 20,
+        y + 8.6
+      );
+
+      // Footer is added after the document is complete so every page gets one.
+      const totalPages = pdf.getNumberOfPages();
+
+      for (let page = 1; page <= totalPages; page += 1) {
+        pdf.setPage(page);
+        drawFooter(page);
+      }
 
       pdf.save(
         `${safePdfFileName(trip.title)}-Itinerary-Bucketlist-Adventure.pdf`
@@ -988,7 +1181,6 @@ const displayAvailableSeats = displayBatch
       setIsDownloadingPdf(false);
     }
   };
-
 
   return (
     <main ref={pageRef} className="min-h-screen bg-[#f5f3ee] pb-24 text-[#17251d] sm:pb-0">
