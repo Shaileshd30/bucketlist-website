@@ -238,7 +238,7 @@ export async function GET(request: Request) {
         supabaseAdmin
           .from("trips")
           .select(
-            "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,featured"
+            "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
           )
           .eq("archived", false)
           .order("created_at", {
@@ -288,7 +288,9 @@ export async function GET(request: Request) {
         startPoint: row.start_point || "",
         durationDays: row.duration_days || undefined,
         groupSize: row.group_size || undefined,
-        image: "",
+        image:
+          safePublicImage(row.image) ||
+          "/images/about/about-expedition.jpg",
         featured: row.featured || false,
         batches: batchesByTrip.get(row.id) || [],
       }));
