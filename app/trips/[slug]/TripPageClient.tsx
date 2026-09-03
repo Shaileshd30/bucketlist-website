@@ -991,7 +991,7 @@ const displayAvailableSeats = displayBatch
 
 
   return (
-    <main ref={pageRef} className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
+    <main ref={pageRef} className="min-h-screen bg-[#f5f3ee] pb-24 text-[#17251d] sm:pb-0">
       <div className="mx-auto max-w-6xl px-6 py-16 lg:px-10">
 
         {/* Back */}
@@ -2141,6 +2141,56 @@ const displayAvailableSeats = displayBatch
                 );
               })}
           </div>
+        </div>
+      </div>
+
+      {/* MOBILE CONVERSION BAR */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 px-3 pt-2 shadow-[0_-12px_35px_rgba(23,37,29,0.12)] backdrop-blur-xl sm:hidden"
+        style={{
+          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+        }}
+      >
+        <div className="mx-auto grid max-w-lg grid-cols-[minmax(82px,0.9fr)_1fr_1fr] items-center gap-2">
+          <div className="min-w-0 px-1">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#5d6862]">
+              {currentPrice ? "From" : "Price"}
+            </p>
+            <p className="truncate text-base font-bold leading-5 text-[#17251d]">
+              {currentPrice
+                ? formatPrice(currentPrice)
+                : trip.price || "On request"}
+            </p>
+            {displayBatch && (
+              <p className="mt-0.5 truncate text-[9px] text-[#5d6862]">
+                {formatDate(displayBatch.departureDate)}
+              </p>
+            )}
+          </div>
+
+          <a
+            href={`https://wa.me/918482846287?text=${encodeURIComponent(
+              `Hi Bucketlist Adventure, I'm interested in ${trip.title}${
+                selectedBatch
+                  ? ` for ${formatDate(selectedBatch.departureDate)}`
+                  : ""
+              }. We are ${travelerCount} traveler(s). Please share the details.`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#17251d]/15 bg-white px-2 text-xs font-bold text-[#17251d] transition active:scale-[0.98]"
+          >
+            WhatsApp
+          </a>
+
+          <button
+            type="button"
+            onClick={handleBookNow}
+            disabled={!selectedBatch || !isEnoughSeats}
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-orange-500 px-2 text-xs font-bold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#17251d]/20 disabled:text-[#17251d]/45 disabled:shadow-none"
+          >
+            {selectedBatch ? "Book Now" : "Dates Soon"}
+          </button>
         </div>
       </div>
     </main>
