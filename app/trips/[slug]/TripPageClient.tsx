@@ -655,7 +655,7 @@ const displayAvailableSeats = displayBatch
             {/* BOOKING CARD */}
             <div
               id="booking-form"
-              className="sticky top-6 rounded-[28px] border border-black/10 bg-[#17251d] p-8 text-white shadow-[0_24px_60px_rgba(0,0,0,0.08)]"
+              className="rounded-[28px] border border-black/10 bg-[#17251d] p-8 text-white shadow-[0_24px_60px_rgba(0,0,0,0.08)] lg:sticky lg:top-6"
             >
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-orange-300">
                 Book your adventure
