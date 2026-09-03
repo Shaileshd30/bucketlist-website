@@ -1133,36 +1133,39 @@ export default function Home() {
       >
         {[
           {
-            word: "ALIVE",
+            word: "SAHYADRI",
             eyebrow: "Treks & Adventures",
             title: "Go where the road ends.",
+            accentLine: "गड-किल्ल्यांची भूमी, भटक्यांची पंढरी.",
+            accentLang: "mr",
             description:
               "Sahyadri trails, Himalayan treks and expeditions created for travellers who want to earn the view.",
             category: "Treks & Adventures",
-            image:
-              "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+            image: "/images/home/scrollcraft-sahyadri.jpg",
             position: "center 45%",
           },
           {
             word: "INDIA",
             eyebrow: "Domestic Tours",
             title: "Take the long road.",
+            accentLine: "अतिथी देवो भवः",
+            accentLang: "sa",
             description:
               "Ladakh, Spiti, Kashmir, Kerala, Andaman, Mysuru and immersive journeys across India.",
             category: "Domestic Tours",
-            image:
-              "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+            image: "/images/home/scrollcraft-india.jpg",
             position: "center 52%",
           },
           {
             word: "BEYOND",
             eyebrow: "International Tours",
             title: "Make the world your next story.",
+            accentLine: "Not all those who wander are lost.",
+            accentLang: "en",
             description:
               "Curated journeys beyond borders, built around iconic places, local culture and seamless planning.",
             category: "International Tours",
-            image:
-              "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+            image: "/images/home/scrollcraft-beyond.jpg",
             position: "center 50%",
           },
         ].map((scene, index) => (
@@ -1176,11 +1179,11 @@ export default function Home() {
               className="scrollcraft-word absolute inset-x-0 top-[18svh] h-[31svh] sm:inset-0 sm:h-auto"
               style={{
                 WebkitMaskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Ctext x='800' y='535' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-size='310' font-weight='900' letter-spacing='-18' fill='white'%3E${scene.word}%3C/text%3E%3C/svg%3E")`,
-                WebkitMaskSize: "121% auto",
+                WebkitMaskSize: scene.word === "SAHYADRI" ? "96% auto" : "121% auto",
                 WebkitMaskRepeat: "no-repeat",
                 WebkitMaskPosition: "center",
                 maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Ctext x='800' y='535' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-size='310' font-weight='900' letter-spacing='-18' fill='white'%3E${scene.word}%3C/text%3E%3C/svg%3E")`,
-                maskSize: "121% auto",
+                maskSize: scene.word === "SAHYADRI" ? "96% auto" : "121% auto",
                 maskRepeat: "no-repeat",
                 maskPosition: "center",
               }}
@@ -1201,7 +1204,10 @@ export default function Home() {
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-[18svh] flex h-[31svh] items-center justify-center overflow-hidden px-2 text-center font-black uppercase leading-none tracking-[-0.055em] text-transparent sm:inset-0 sm:h-auto sm:px-4"
               style={{
-                fontSize: "clamp(3.5rem, 20vw, 18.6rem)",
+                fontSize:
+                  scene.word === "SAHYADRI"
+                    ? "clamp(3.1rem, 15.8vw, 14.8rem)"
+                    : "clamp(3.5rem, 20vw, 18.6rem)",
                 WebkitTextStroke: "1px rgba(255,255,255,0.10)",
               }}
             >
@@ -1216,6 +1222,12 @@ export default function Home() {
                 <h2 className="mt-2 text-[1.7rem] font-bold leading-[1.02] tracking-[-0.04em] sm:mt-3 sm:text-4xl lg:text-5xl">
                   {scene.title}
                 </h2>
+                <p
+                  lang={scene.accentLang}
+                  className="mt-2 text-[12px] font-semibold leading-5 text-orange-300 sm:text-sm"
+                >
+                  {scene.accentLine}
+                </p>
                 <p className="mt-2 max-w-xl text-[11px] leading-[1.55] text-white/68 sm:mt-3 sm:text-sm sm:leading-7">
                   {scene.description}
                 </p>
