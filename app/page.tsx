@@ -1025,7 +1025,7 @@ export default function Home() {
               className="group relative min-h-[400px] overflow-hidden rounded-[32px] bg-[#17251d] shadow-[0_28px_80px_rgba(0,0,0,0.12)] sm:min-h-[500px]"
             >
               <img
-                src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=85"
+                src="/images/home/rajgad-sahyadri.webp"
                 alt=""
                 aria-hidden="true"
                 loading="lazy"
