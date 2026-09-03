@@ -28,6 +28,8 @@ type TripRow = {
   trip_type: TripData["tripType"] | null;
 
   category: TripData["category"];
+  travel_category: TripData["travelCategory"] | null;
+  destination: string | null;
 
   highlight: string | null;
   subtitle: string | null;
@@ -128,8 +130,15 @@ function mapTrip(
 
     category: row.category,
 
-    highlight:
-      row.highlight || undefined,
+    
+travelCategory:
+  row.travel_category || undefined,
+
+destination:
+  row.destination || undefined,
+
+highlight:
+  row.highlight || undefined,
 
     subtitle:
       row.subtitle || "",
@@ -493,17 +502,22 @@ function createTripStructuredData(
 
   /* Starting Point / Trip Category */
 
-  if (trip.startPoint) {
-    tripSchema.touristType =
-      trip.category;
+  /* Destination / Trip Category */
 
-    tripSchema.itinerary = {
-      "@type": "Place",
+if (trip.travelCategory) {
+  tripSchema.touristType =
+    trip.travelCategory;
+}
 
-      name:
-        trip.startPoint,
-    };
-  }
+if (trip.destination || trip.startPoint) {
+  tripSchema.itinerary = {
+    "@type": "Place",
+
+    name:
+      trip.destination ||
+      trip.startPoint,
+  };
+}
 
   /* Additional Properties */
 
