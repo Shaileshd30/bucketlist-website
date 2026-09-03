@@ -55,6 +55,9 @@ export default function Home() {
   const [heroVideoFailed, setHeroVideoFailed] =
     useState(false);
 
+  const [mobileMenuOpen, setMobileMenuOpen] =
+    useState(false);
+
   const heroVideoRef =
     useRef<HTMLVideoElement | null>(null);
 
@@ -530,60 +533,114 @@ export default function Home() {
         </a>
 
         {/* Mobile menu */}
-        <details className="group relative lg:hidden">
-          <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border border-white/20 bg-black/25 text-lg text-white backdrop-blur-md">
-            ☰
-          </summary>
-
-          <div className="absolute right-0 top-14 w-[260px] overflow-hidden rounded-[22px] border border-white/10 bg-[#0b1510]/95 p-3 shadow-2xl backdrop-blur-xl">
-            <div className="flex flex-col text-sm font-semibold text-white">
-
-              <a
-                href="/about"
-                className="rounded-xl px-4 py-3 transition hover:bg-white/10"
-              >
-                About
-              </a>
-
-              <a
-                href="#destinations"
-                className="rounded-xl px-4 py-3 transition hover:bg-white/10"
-              >
-                Destinations
-              </a>
-
-              <a
-                href="#adventures"
-                className="rounded-xl px-4 py-3 transition hover:bg-white/10"
-              >
-                Adventures
-              </a>
-
-              <a
-                href="#contact"
-                className="rounded-xl px-4 py-3 transition hover:bg-white/10"
-              >
-                Contact
-              </a>
-
-              <div className="my-2 border-t border-white/10" />
-
-              <a
-                href="https://wa.me/918482846287"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl bg-orange-500 px-4 py-3 text-center font-bold text-white"
-              >
-                Plan a Trip ↗
-              </a>
-
-            </div>
-          </div>
-        </details>
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={mobileMenuOpen}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition hover:bg-white/15 lg:hidden"
+        >
+          <span className="flex w-5 flex-col gap-1.5">
+            <span className="h-px w-full bg-white" />
+            <span className="h-px w-full bg-white" />
+            <span className="h-px w-full bg-white" />
+          </span>
+        </button>
 
       </div>
     </div>
   </header>
+
+  {/* Premium mobile navigation */}
+  <div
+    className={`fixed inset-0 z-[70] transition lg:hidden ${
+      mobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
+    }`}
+    aria-hidden={!mobileMenuOpen}
+  >
+    <button
+      type="button"
+      aria-label="Close navigation menu"
+      onClick={() => setMobileMenuOpen(false)}
+      className={`absolute inset-0 bg-[#07120d]/70 backdrop-blur-sm transition-opacity duration-300 ${
+        mobileMenuOpen ? "opacity-100" : "opacity-0"
+      }`}
+    />
+
+    <div
+      className={`absolute inset-x-3 top-3 overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1510]/98 text-white shadow-[0_30px_100px_rgba(0,0,0,0.45)] transition duration-300 ${
+        mobileMenuOpen
+          ? "translate-y-0 opacity-100"
+          : "-translate-y-5 opacity-0"
+      }`}
+    >
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <a
+          href="/"
+          onClick={() => setMobileMenuOpen(false)}
+          className="relative block h-12 w-44"
+        >
+          <Image
+            src="/bucketlist-logo.png"
+            alt="Bucketlist Adventure"
+            fill
+            className="object-contain object-left"
+            sizes="176px"
+          />
+        </a>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-label="Close navigation menu"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-xl text-white"
+        >
+          ×
+        </button>
+      </div>
+
+      <nav className="p-3">
+        {[
+          { label: "Explore All Trips", href: "/trips", note: "Find your next journey" },
+          { label: "Destinations", href: "#destinations", note: "India & beyond" },
+          { label: "Upcoming Adventures", href: "#adventures", note: "Fixed departures" },
+          { label: "About Bucketlist", href: "/about", note: "Our story & approach" },
+          { label: "Contact", href: "#contact", note: "Talk to our team" },
+        ].map((item) => (
+          <a
+            key={item.label}
+            href={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className="group flex items-center justify-between rounded-2xl px-4 py-3.5 transition active:bg-white/10"
+          >
+            <span>
+              <span className="block text-[15px] font-bold">{item.label}</span>
+              <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[0.14em] text-white/40">
+                {item.note}
+              </span>
+            </span>
+            <span className="text-lg text-orange-400 transition group-hover:translate-x-1">→</span>
+          </a>
+        ))}
+      </nav>
+
+      <div className="border-t border-white/10 p-4">
+        <a
+          href="https://wa.me/918482846287"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMobileMenuOpen(false)}
+          className="flex min-h-14 items-center justify-center rounded-2xl bg-orange-500 px-5 text-sm font-bold text-white transition active:scale-[0.99]"
+        >
+          Plan a Trip on WhatsApp ↗
+        </a>
+
+        <p className="mt-3 text-center text-[10px] font-medium uppercase tracking-[0.16em] text-white/35">
+          We Plan It. You Live It.
+        </p>
+      </div>
+    </div>
+  </div>
 
   {/* HERO CONTENT */}
   <div className="relative z-20 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-5 pb-5 pt-24 sm:px-6 sm:pb-8 sm:pt-32 lg:px-10 lg:pb-12">
