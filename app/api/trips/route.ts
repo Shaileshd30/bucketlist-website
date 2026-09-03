@@ -36,6 +36,7 @@ type TripRow = {
   medical_disclaimer: string[] | null;
   rules: string[] | null;
   featured: boolean | null;
+  upcoming: boolean | null;
 };
 
 type BatchRow = {
@@ -159,6 +160,9 @@ function mapTrip(
     featured:
       row.featured || false,
 
+    upcoming:
+      row.upcoming || false,
+
     batches,
   };
 }
@@ -246,7 +250,7 @@ export async function GET(request: Request) {
         supabaseAdmin
           .from("trips")
           .select(
-            "id,slug,title,trip_type,category,travel_category,destination,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
+            "id,slug,title,trip_type,category,travel_category,destination,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured,upcoming"
           )
           .eq("archived", false)
           .order("created_at", {
@@ -302,6 +306,7 @@ export async function GET(request: Request) {
           safePublicImage(row.image) ||
           "/images/about/about-expedition.jpg",
         featured: row.featured || false,
+        upcoming: row.upcoming || false,
         batches: batchesByTrip.get(row.id) || [],
       }));
 
@@ -461,6 +466,7 @@ async function saveSingleTrip(trip: TripData) {
     medical_disclaimer: trip.medicalDisclaimer || [],
     rules: trip.rules || [],
     featured: trip.featured || false,
+    upcoming: trip.upcoming || false,
     archived: false,
   };
 
