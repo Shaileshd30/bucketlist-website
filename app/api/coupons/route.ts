@@ -98,6 +98,13 @@ function mapCoupon(
 }
 
 export async function GET() {
+  const authError =
+    await requireAdmin();
+
+  if (authError) {
+    return authError;
+  }
+
   try {
     const [
       couponsResult,
