@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 
 import {
   defaultTrips,
-  tripCategories,
+  travelCategories,
   type TripBatch,
   type TripData,
 } from "../data/trips";
@@ -20,10 +20,10 @@ const BASE_URL = "https://bucketlistadventure.in";
 ========================================================= */
 
 export const metadata: Metadata = {
-  title: "Adventure Trips, Treks & Expeditions",
+  title: "Treks, Domestic Tours & International Trips",
 
   description:
-    "Explore weekend treks from Pune, Sahyadri adventures, Himalayan expeditions, Ladakh and Spiti road trips, Kashmir tours, Nepal treks and customized journeys with Bucketlist Adventure.",
+    "Explore treks and adventures, domestic tours across India, and international trips with Bucketlist Adventure. Discover upcoming departures, road trips, holidays and customized journeys.",
 
   alternates: {
     canonical: `${BASE_URL}/trips`,
@@ -31,10 +31,10 @@ export const metadata: Metadata = {
 
   openGraph: {
     title:
-      "Adventure Trips, Treks & Expeditions | Bucketlist Adventure",
+      "Treks, Domestic Tours & International Trips | Bucketlist Adventure",
 
     description:
-      "Discover weekend treks, Himalayan expeditions, road trips and thoughtfully planned adventures across India and beyond.",
+      "Discover treks and adventures, domestic tours across India, international trips and thoughtfully planned journeys with Bucketlist Adventure.",
 
     url: `${BASE_URL}/trips`,
 
@@ -81,6 +81,8 @@ type TripRow = {
   trip_type: TripData["tripType"] | null;
 
   category: TripData["category"];
+  travel_category: TripData["travelCategory"] | null;
+  destination: string | null;
 
   highlight: string | null;
   subtitle: string | null;
@@ -186,6 +188,12 @@ function mapTrip(
 
     category: row.category,
 
+    travelCategory:
+      row.travel_category || undefined,
+
+    destination:
+      row.destination || undefined,
+
     highlight:
       row.highlight || undefined,
 
@@ -262,6 +270,7 @@ async function getTrips(): Promise<TripData[]> {
     } = await supabaseAdmin
       .from("trips")
       .select("*")
+      .eq("archived", false)
       .order("title", {
         ascending: true,
       });
@@ -506,17 +515,35 @@ function createStructuredData(
    PAGE
 ========================================================= */
 
-export default async function TripsPage() {
+export default async function TripsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   const trips =
     await getTrips();
 
+  const params = await searchParams;
+
+  const requestedCategory =
+    typeof params.category === "string"
+      ? decodeURIComponent(params.category)
+      : "";
+
+  const activeCategory =
+    travelCategories.includes(
+      requestedCategory as (typeof travelCategories)[number]
+    )
+      ? (requestedCategory as (typeof travelCategories)[number])
+      : null;
+
   const groupedTrips =
-    tripCategories.reduce(
+    travelCategories.reduce(
       (acc, category) => {
         acc[category] =
           trips.filter(
             (trip) =>
-              trip.category ===
+              trip.travelCategory ===
               category
           );
 
@@ -528,9 +555,24 @@ export default async function TripsPage() {
       >
     );
 
+  const visibleCategories =
+    activeCategory
+      ? travelCategories.filter(
+          (category) => category === activeCategory
+        )
+      : travelCategories;
+
+  const visibleTrips =
+    activeCategory
+      ? trips.filter(
+          (trip) =>
+            trip.travelCategory === activeCategory
+        )
+      : trips;
+
   const structuredData =
     createStructuredData(
-      trips
+      visibleTrips
     );
 
   return (
@@ -565,28 +607,30 @@ export default async function TripsPage() {
           </p>
 
           <h1 className="max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Treks, expeditions &
-            adventure journeys
+            Adventures, holidays &
+            journeys worth living
           </h1>
 
           <p className="mt-6 max-w-3xl text-base leading-8 text-[#5d6862] sm:text-lg">
-            Explore weekend treks from Pune,
-            Sahyadri adventures, Himalayan
-            expeditions, Ladakh and Spiti road
-            trips, Kashmir journeys, Nepal treks
-            and thoughtfully planned experiences
-            across India and beyond.
+            Explore treks and expeditions, unforgettable
+            journeys across India, and thoughtfully planned
+            international experiences — all curated by
+            Bucketlist Adventure.
           </p>
 
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[#6b756f]">
-            Whether you&apos;re looking for a
-            quick weekend escape, your first
-            Himalayan trek, a high-altitude
-            expedition or a customized group
-            journey, choose an adventure and
-            explore the upcoming departures
-            below.
+            Whether you&apos;re looking for a weekend
+            trek, a Ladakh or Spiti road trip, a Kerala
+            escape, an Andaman holiday, or your next
+            international journey, start with the collection
+            that fits the way you want to travel.
           </p>
+
+          {activeCategory && (
+            <p className="mt-5 inline-flex rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600">
+              Showing only: {activeCategory}
+            </p>
+          )}
 
         </header>
         <div className="mb-12 overflow-hidden rounded-[28px] border border-black/10 bg-white p-6 sm:p-8">
@@ -615,10 +659,24 @@ export default async function TripsPage() {
   </div>
 </div>
 
-        {/* QUICK DISCOVERY */}
+        {/* QUICK DISCOVERY / FILTERS */}
         <div className="mb-14 flex flex-wrap gap-3">
 
-          {tripCategories.map(
+          <Link
+            href="/trips"
+            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+              !activeCategory
+                ? "border-[#17251d] bg-[#17251d] text-white"
+                : "border-black/10 bg-white text-[#17251d] hover:border-orange-400 hover:text-orange-500"
+            }`}
+          >
+            All Trips
+            <span className={`ml-2 ${!activeCategory ? "text-white/60" : "text-[#17251d]/40"}`}>
+              {trips.length}
+            </span>
+          </Link>
+
+          {travelCategories.map(
             (category) => {
               const count =
                 groupedTrips[
@@ -629,22 +687,24 @@ export default async function TripsPage() {
                 return null;
               }
 
+              const isActive =
+                activeCategory === category;
+
               return (
-                <a
+                <Link
                   key={category}
-                  href={`#${category
-                    .toLowerCase()
-                    .replace(
-                      /[^a-z0-9]+/g,
-                      "-"
-                    )}`}
-                  className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[#17251d] transition hover:border-orange-400 hover:text-orange-500"
+                  href={`/trips?category=${encodeURIComponent(category)}`}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    isActive
+                      ? "border-[#17251d] bg-[#17251d] text-white"
+                      : "border-black/10 bg-white text-[#17251d] hover:border-orange-400 hover:text-orange-500"
+                  }`}
                 >
                   {category}
-                  <span className="ml-2 text-[#17251d]/40">
+                  <span className={`ml-2 ${isActive ? "text-white/60" : "text-[#17251d]/40"}`}>
                     {count}
                   </span>
-                </a>
+                </Link>
               );
             }
           )}
@@ -654,7 +714,7 @@ export default async function TripsPage() {
         {/* CATEGORIES */}
         <div className="space-y-16">
 
-          {tripCategories.map(
+          {visibleCategories.map(
             (category) => {
               const categoryTrips =
                 groupedTrips[
@@ -765,8 +825,9 @@ export default async function TripsPage() {
                               <div className="mb-4 flex items-center justify-between gap-4">
 
                                 <span className="rounded-full bg-[#f7f5f2] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]">
-                                  {trip.startPoint ||
-                                    "India"}
+                                  {trip.destination ||
+                                    trip.startPoint ||
+                                    "Explore"}
                                 </span>
 
                                 <span className="text-xs font-medium uppercase tracking-[0.2em] text-orange-500">

@@ -34,6 +34,11 @@ export interface TripBatch {
 
 export type TripCategory = "Sahyadri" | "Himalayas" | "Nepal";
 
+export type TravelCategory =
+  | "Treks & Adventures"
+  | "Domestic Tours"
+  | "International Tours";
+
 export type TripData = {
   // Basic information
   id: string;
@@ -42,6 +47,8 @@ export type TripData = {
 
   // Classification
   tripType?: "Fixed Departure" | "Custom Trip" | "Corporate";
+  travelCategory?: TravelCategory;
+  destination?: string;
 
   // Marketing/content
   highlight?: string;
@@ -108,6 +115,12 @@ export const tripCategories: TripCategory[] = [
   "Nepal",
 ];
 
+export const travelCategories: TravelCategory[] = [
+  "Treks & Adventures",
+  "Domestic Tours",
+  "International Tours",
+];
+
 export const defaultTrips: TripData[] = [
   {
     id: "devkund-waterfall-rappelling",
@@ -115,6 +128,9 @@ export const defaultTrips: TripData[] = [
     title: "Devkund Waterfall Rappelling",
 
     tripType: "Fixed Departure",
+
+    travelCategory: "Treks & Adventures",
+    destination: "Sahyadri",
 
     highlight:
       "A hidden Western Ghats adventure with cliff rappels and a waterfall pool.",
@@ -270,6 +286,9 @@ export const defaultTrips: TripData[] = [
 
     tripType: "Fixed Departure",
 
+    travelCategory: "Treks & Adventures",
+    destination: "Sahyadri",
+
     highlight:
       "Konkan Kada, ancient caves and dramatic Sahyadri landscapes",
 
@@ -339,6 +358,9 @@ export const defaultTrips: TripData[] = [
 
     tripType: "Fixed Departure",
 
+    travelCategory: "Treks & Adventures",
+    destination: "Sahyadri",
+
     highlight:
       "Sunrise views across the Sahyadri valleys",
 
@@ -406,6 +428,9 @@ export const defaultTrips: TripData[] = [
     slug: "leh-ladakh",
     title: "Leh Ladakh Expedition",
 
+    travelCategory: "Domestic Tours",
+    destination: "Ladakh",
+
     subtitle:
       "High passes. Vast skies. Unforgettable roads.",
 
@@ -470,6 +495,9 @@ export const defaultTrips: TripData[] = [
     id: "spiti-valley",
     slug: "spiti-valley",
     title: "Spiti Valley Adventure",
+
+    travelCategory: "Domestic Tours",
+    destination: "Spiti Valley",
 
     subtitle:
       "Remote villages. Glacial views. Alpine solitude.",
@@ -536,6 +564,9 @@ export const defaultTrips: TripData[] = [
     slug: "kashmir",
     title: "Kashmir Valley Escape",
 
+    travelCategory: "Domestic Tours",
+    destination: "Kashmir",
+
     subtitle:
       "Lakes, meadows, and Himalayan calm.",
 
@@ -599,6 +630,9 @@ export const defaultTrips: TripData[] = [
     id: "nepal",
     slug: "nepal",
     title: "Nepal Himalayan Journey",
+
+    travelCategory: "International Tours",
+    destination: "Nepal",
 
     subtitle:
       "Everest horizon. Mountain villages. Big adventure.",

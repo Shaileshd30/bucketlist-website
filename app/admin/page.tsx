@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 import {
   defaultTrips,
   tripCategories,
+  travelCategories,
   type TripBatch,
   type TripCategory,
   type TripData,
+  type TravelCategory,
 } from "../data/trips";
 
 
@@ -401,6 +403,8 @@ const deleteBatch = (batchId: string) => {
       title: "New trip",
 
       tripType: "Fixed Departure",
+      travelCategory: "Treks & Adventures",
+      destination: "Sahyadri",
 
       subtitle: "Add a compelling short description",
       summary: "Write a short overview for this trip.",
@@ -532,7 +536,9 @@ const deleteBatch = (batchId: string) => {
     const overview = (trip.overview || trip.description || "").trim();
 
     if (!trip.title?.trim() || trip.title.trim() === "New trip") validationErrors.push("Enter a proper trip title.");
-    if (!trip.category) validationErrors.push("Select a category.");
+    if (!trip.category) validationErrors.push("Select a legacy category.");
+    if (!trip.travelCategory) validationErrors.push("Select a travel category.");
+    if (!trip.destination?.trim()) validationErrors.push("Enter a destination.");
     if (!trip.tripType) validationErrors.push("Select a trip type.");
     if (!trip.subtitle?.trim() || trip.subtitle.trim() === "Add a compelling short description") validationErrors.push("Add a subtitle.");
     if (!trip.difficulty?.trim()) validationErrors.push("Select the difficulty level.");
@@ -903,7 +909,53 @@ const deleteBatch = (batchId: string) => {
             </div>
 
             <label className="block space-y-2 text-sm font-medium text-[#17251d]">
-              <span>Category</span>
+              <span>Travel category</span>
+              <select
+                value={trip.travelCategory || ""}
+                onChange={(event) => {
+                  setStatus(null);
+                  setSiteSynced(false);
+                  setTrips((current) =>
+                    current.map((item) =>
+                      item.slug === selectedSlug
+                        ? {
+                            ...item,
+                            travelCategory: event.target.value as TravelCategory,
+                          }
+                        : item
+                    )
+                  );
+                }}
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              >
+                <option value="">Select travel category</option>
+                {travelCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs leading-5 text-[#718078]">
+                Main customer-facing group: Treks & Adventures, Domestic Tours or International Tours.
+              </p>
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Destination</span>
+              <input
+                type="text"
+                value={trip.destination || ""}
+                onChange={(event) => updateField("destination", event.target.value)}
+                placeholder="Example: Kerala, Andaman, Mysuru, Ladakh, Nepal"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-orange-400"
+              />
+              <p className="text-xs leading-5 text-[#718078]">
+                Enter the destination or region for this trip. You can add new destinations without changing code.
+              </p>
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-[#17251d]">
+              <span>Legacy category</span>
               <select
                 value={trip.category}
                 onChange={(event) => {
@@ -929,7 +981,7 @@ const deleteBatch = (batchId: string) => {
                 ))}
               </select>
               <p className="text-xs leading-5 text-[#718078]">
-                Choose where this trip should appear on the public Trips page.
+                Temporary compatibility field for the current public Trips page. We will remove it after the public taxonomy migration.
               </p>
             </label>
 

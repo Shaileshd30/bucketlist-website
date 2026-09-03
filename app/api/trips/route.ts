@@ -14,6 +14,8 @@ type TripRow = {
   title: string;
   trip_type: TripData["tripType"] | null;
   category: TripData["category"];
+  travel_category: TripData["travelCategory"] | null;
+  destination: string | null;
   highlight: string | null;
   subtitle: string | null;
   summary: string | null;
@@ -90,6 +92,12 @@ function mapTrip(
       row.trip_type || undefined,
 
     category: row.category,
+
+    travelCategory:
+      row.travel_category || undefined,
+
+    destination:
+      row.destination || undefined,
 
     highlight:
       row.highlight || undefined,
@@ -238,7 +246,7 @@ export async function GET(request: Request) {
         supabaseAdmin
           .from("trips")
           .select(
-            "id,slug,title,trip_type,category,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
+            "id,slug,title,trip_type,category,travel_category,destination,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured"
           )
           .eq("archived", false)
           .order("created_at", {
@@ -280,6 +288,8 @@ export async function GET(request: Request) {
         title: row.title,
         tripType: row.trip_type || undefined,
         category: row.category,
+        travelCategory: row.travel_category || undefined,
+        destination: row.destination || undefined,
         highlight: row.highlight || undefined,
         subtitle: row.subtitle || "",
         summary: row.summary || "",
@@ -429,6 +439,8 @@ async function saveSingleTrip(trip: TripData) {
     title: trip.title,
     trip_type: trip.tripType || null,
     category: trip.category,
+    travel_category: trip.travelCategory || null,
+    destination: trip.destination || null,
     highlight: trip.highlight || null,
     subtitle: trip.subtitle || "",
     summary: trip.summary || "",
