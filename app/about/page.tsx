@@ -447,7 +447,7 @@ export default function AboutPage() {
               </Link>
 
               <a
-                href="https://wa.me/919225531257?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20know%20more%20about%20your%20trips."
+                href="https://wa.me/918482846287?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20know%20more%20about%20your%20trips."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full border border-white/30 px-6 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-orange-600"

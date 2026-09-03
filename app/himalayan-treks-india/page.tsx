@@ -619,7 +619,7 @@ export default async function HimalayanTreksPage() {
             </a>
 
             <a
-              href="https://wa.me/919225531257?text=Hi%20Bucketlist%20Adventure%2C%20I%20am%20interested%20in%20a%20Himalayan%20trek."
+              href="https://wa.me/918482846287?text=Hi%20Bucketlist%20Adventure%2C%20I%20am%20interested%20in%20a%20Himalayan%20trek."
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-semibold text-white transition hover:bg-white hover:text-[#17251d]"
@@ -1150,7 +1150,7 @@ export default async function HimalayanTreksPage() {
             <div className="flex flex-wrap gap-3 lg:justify-end">
 
               <a
-                href="https://wa.me/919225531257?text=Hi%20Bucketlist%20Adventure%2C%20please%20suggest%20a%20Himalayan%20trek."
+                href="https://wa.me/918482846287?text=Hi%20Bucketlist%20Adventure%2C%20please%20suggest%20a%20Himalayan%20trek."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full bg-orange-500 px-6 py-4 text-sm font-bold text-white transition hover:bg-orange-400"

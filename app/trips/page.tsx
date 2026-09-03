@@ -948,7 +948,7 @@ export default async function TripsPage({
               </Link>
 
               <a
-                href="https://wa.me/919225531257?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20plan%20a%20trip."
+                href="https://wa.me/918482846287?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20plan%20a%20trip."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-semibold text-white transition hover:bg-white hover:text-[#17251d]"
