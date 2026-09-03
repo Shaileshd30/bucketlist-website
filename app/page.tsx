@@ -1213,6 +1213,7 @@ export default function Home() {
     const upcomingTrips = trips
       .filter(
         (trip) =>
+          trip.upcoming === true &&
           getUpcomingBatches(trip).length > 0
       )
       .sort((a, b) => {
