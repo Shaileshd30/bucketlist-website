@@ -271,7 +271,7 @@ export default function Home() {
         scrollTrigger: {
           trigger: section,
           start: "top top",
-          end: "+=320%",
+          end: () => (window.innerWidth < 640 ? "+=220%" : "+=320%"),
           pin: true,
           scrub: 0.8,
           anticipatePin: 1,
@@ -1063,6 +1063,7 @@ export default function Home() {
             category: "Treks & Adventures",
             image:
               "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+            position: "center 45%",
           },
           {
             word: "INDIA",
@@ -1073,6 +1074,7 @@ export default function Home() {
             category: "Domestic Tours",
             image:
               "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+            position: "center 52%",
           },
           {
             word: "BEYOND",
@@ -1083,23 +1085,24 @@ export default function Home() {
             category: "International Tours",
             image:
               "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+            position: "center 50%",
           },
         ].map((scene, index) => (
           <div
             key={scene.word}
-            className="scrollcraft-scene absolute inset-0 flex items-center justify-center"
+            className="scrollcraft-scene absolute inset-0"
             style={{ zIndex: index + 1 }}
           >
-            {/* Full cinematic source image. The oversized word clips this image. */}
+            {/* Mobile-first composition: word sits high enough to leave room for copy + CTA. */}
             <div
-              className="scrollcraft-word absolute inset-0 flex items-center justify-center px-3 sm:px-6"
+              className="scrollcraft-word absolute inset-x-0 top-[18svh] h-[31svh] sm:inset-0 sm:h-auto"
               style={{
                 WebkitMaskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Ctext x='800' y='535' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-size='310' font-weight='900' letter-spacing='-18' fill='white'%3E${scene.word}%3C/text%3E%3C/svg%3E")`,
-                WebkitMaskSize: "contain",
+                WebkitMaskSize: "121% auto",
                 WebkitMaskRepeat: "no-repeat",
                 WebkitMaskPosition: "center",
                 maskImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Ctext x='800' y='535' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-size='310' font-weight='900' letter-spacing='-18' fill='white'%3E${scene.word}%3C/text%3E%3C/svg%3E")`,
-                maskSize: "contain",
+                maskSize: "121% auto",
                 maskRepeat: "no-repeat",
                 maskPosition: "center",
               }}
@@ -1111,44 +1114,45 @@ export default function Home() {
                 loading="lazy"
                 decoding="async"
                 className="scrollcraft-media absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: scene.position }}
               />
             </div>
 
-            {/* Fine outline keeps the typography legible against black. */}
+            {/* Mobile outline uses the same visual zone as the mask. Desktop keeps the large treatment. */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 flex items-center justify-center px-4 text-center font-black uppercase leading-none tracking-[-0.055em] text-transparent"
+              className="pointer-events-none absolute inset-x-0 top-[18svh] flex h-[31svh] items-center justify-center overflow-hidden px-2 text-center font-black uppercase leading-none tracking-[-0.055em] text-transparent sm:inset-0 sm:h-auto sm:px-4"
               style={{
-                fontSize: "clamp(4rem, 19.4vw, 18.6rem)",
+                fontSize: "clamp(3.5rem, 20vw, 18.6rem)",
                 WebkitTextStroke: "1px rgba(255,255,255,0.10)",
               }}
             >
               {scene.word}
             </div>
 
-            <div className="scrollcraft-copy absolute inset-x-0 bottom-8 z-20 mx-auto flex max-w-[1400px] flex-col gap-5 px-6 sm:bottom-10 sm:px-10 lg:bottom-12 lg:flex-row lg:items-end lg:justify-between">
+            <div className="scrollcraft-copy absolute inset-x-0 bottom-[max(4.25rem,env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-[1400px] flex-col gap-4 px-5 sm:bottom-10 sm:gap-5 sm:px-10 lg:bottom-12 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-orange-400 sm:text-xs">
+                <p className="text-[9px] font-bold uppercase tracking-[0.27em] text-orange-400 sm:text-xs sm:tracking-[0.32em]">
                   {String(index + 1).padStart(2, "0")} · {scene.eyebrow}
                 </p>
-                <h2 className="mt-3 text-2xl font-bold tracking-[-0.035em] sm:text-4xl lg:text-5xl">
+                <h2 className="mt-2 text-[1.7rem] font-bold leading-[1.02] tracking-[-0.04em] sm:mt-3 sm:text-4xl lg:text-5xl">
                   {scene.title}
                 </h2>
-                <p className="mt-3 max-w-xl text-xs leading-6 text-white/68 sm:text-sm sm:leading-7">
+                <p className="mt-2 max-w-xl text-[11px] leading-[1.55] text-white/68 sm:mt-3 sm:text-sm sm:leading-7">
                   {scene.description}
                 </p>
               </div>
 
               <a
                 href={`/trips?category=${encodeURIComponent(scene.category)}`}
-                className="inline-flex w-fit items-center rounded-full border border-white/20 bg-white px-5 py-3 text-xs font-bold text-[#17251d] transition hover:bg-orange-400 hover:text-white sm:px-6 sm:py-3.5 sm:text-sm"
+                className="inline-flex w-full items-center justify-center rounded-full border border-white/20 bg-white px-5 py-3 text-[11px] font-bold text-[#17251d] transition hover:bg-orange-400 hover:text-white sm:w-fit sm:px-6 sm:py-3.5 sm:text-sm"
               >
                 Explore {scene.eyebrow}
                 <span className="ml-3">↗</span>
               </a>
             </div>
 
-            <div className="pointer-events-none absolute left-6 top-7 z-20 text-[9px] font-bold uppercase tracking-[0.32em] text-white/35 sm:left-10 sm:top-10">
+            <div className="pointer-events-none absolute left-5 top-5 z-20 text-[8px] font-bold uppercase tracking-[0.28em] text-white/35 sm:left-10 sm:top-10 sm:text-[9px] sm:tracking-[0.32em]">
               Scroll to explore
             </div>
 
