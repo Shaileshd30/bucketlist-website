@@ -65,13 +65,17 @@ export function TripPageClient({ trip }: { trip: TripData }) {
       return [];
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     return [...trip.batches]
       .filter(
         (batch) =>
           batch.visibility === "PUBLIC" &&
           batch.status === "OPEN" &&
           batch.bookingEnabled &&
-          batch.totalSeats - (batch.bookedSeats || 0) > 0
+          batch.totalSeats - (batch.bookedSeats || 0) > 0 &&
+          new Date(batch.departureDate).getTime() >= today.getTime()
       )
       .sort(
         (a, b) =>

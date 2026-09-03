@@ -134,11 +134,32 @@ export default function Home() {
 
           setTrips(liveTrips);
 
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const hasFutureBookableBatch = (trip: TripData) =>
+            (trip.batches || []).some(
+              (batch) =>
+                batch.visibility === "PUBLIC" &&
+                batch.status === "OPEN" &&
+                batch.bookingEnabled &&
+                new Date(batch.departureDate).getTime() >=
+                  today.getTime()
+            );
+
           const featured =
             liveTrips.find(
-              (trip) => trip.featured
+              (trip) =>
+                trip.featured === true &&
+                hasFutureBookableBatch(trip)
             ) ??
-            liveTrips[0] ??
+            liveTrips.find(hasFutureBookableBatch) ??
+            defaultTrips.find(
+              (trip) =>
+                trip.featured === true &&
+                hasFutureBookableBatch(trip)
+            ) ??
+            defaultTrips.find(hasFutureBookableBatch) ??
             defaultTrips[0];
 
           setFeaturedTrip(featured);
