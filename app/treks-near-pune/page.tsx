@@ -275,10 +275,11 @@ async function getTrips(): Promise<TripData[]> {
       error: tripError,
     } = await supabaseAdmin
       .from("trips")
-      .select("*")
-      .order("title", {
-        ascending: true,
-      });
+.select("*")
+.eq("archived", false)
+.order("title", {
+  ascending: true,
+});
 
     if (
       tripError ||
