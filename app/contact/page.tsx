@@ -84,17 +84,17 @@ export default function ContactPage() {
 
               <div className="mt-10 space-y-4">
                 <ContactItem
-                  label="Phone"
-                  value="+91 92255 31257"
-                  href="tel:+918482846287"
-                />
+  label="Phone"
+  value="+91 84828 46287"
+  href="tel:+918482846287"
+/>
 
-                <ContactItem
-                  label="WhatsApp"
-                  value="+91 92255 31257"
-                  href="https://wa.me/918482846287"
-                  external
-                />
+<ContactItem
+  label="WhatsApp"
+  value="+91 84828 46287"
+  href="https://wa.me/918482846287"
+  external
+/>
 
                 <ContactItem
                   label="Email"
@@ -104,7 +104,7 @@ export default function ContactPage() {
               </div>
 
               <a
-                href="https://wa.me/918482846287?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20plan%20a%20trip."
+                href="https://wa.me/919225531257?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20plan%20a%20trip."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-10 inline-flex rounded-full bg-orange-500 px-7 py-4 text-sm font-bold text-white transition hover:bg-orange-600"
