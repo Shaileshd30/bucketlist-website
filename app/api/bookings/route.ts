@@ -491,22 +491,39 @@ export async function POST(
   try {
     let body: CreateBookingRequest;
 
-    try {
-      body =
-        (
-          await request.json()
-        ) as CreateBookingRequest;
-    } catch {
-      return Response.json(
-        {
-          error:
-            "Invalid JSON request body.",
-        },
-        {
-          status: 400,
-        }
-      );
+try {
+  const parsedBody: unknown =
+    await request.json();
+
+  if (
+    parsedBody === null ||
+    typeof parsedBody !== "object" ||
+    Array.isArray(parsedBody)
+  ) {
+    return Response.json(
+      {
+        error:
+          "Invalid JSON request body.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  body =
+    parsedBody as CreateBookingRequest;
+} catch {
+  return Response.json(
+    {
+      error:
+        "Invalid JSON request body.",
+    },
+    {
+      status: 400,
     }
+  );
+}
 
     /*
      * -----------------------------------------------------
