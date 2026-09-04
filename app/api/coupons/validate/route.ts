@@ -110,26 +110,51 @@ export async function POST(
   try {
     let body: ValidateCouponRequest;
 
-    try {
-      body =
-        (await request.json()) as ValidateCouponRequest;
-    } catch {
-      return Response.json(
-        {
-          valid: false,
+try {
+  const parsedBody: unknown =
+    await request.json();
 
-          message:
-            "Invalid JSON request body.",
+  if (
+    parsedBody === null ||
+    typeof parsedBody !== "object" ||
+    Array.isArray(parsedBody)
+  ) {
+    return Response.json(
+      {
+        valid: false,
 
-          discountAmount: 0,
+        message:
+          "Invalid JSON request body.",
 
-          finalAmount: 0,
-        } satisfies CouponValidationResult,
-        {
-          status: 400,
-        }
-      );
+        discountAmount: 0,
+
+        finalAmount: 0,
+      } satisfies CouponValidationResult,
+      {
+        status: 400,
+      }
+    );
+  }
+
+  body =
+    parsedBody as ValidateCouponRequest;
+} catch {
+  return Response.json(
+    {
+      valid: false,
+
+      message:
+        "Invalid JSON request body.",
+
+      discountAmount: 0,
+
+      finalAmount: 0,
+    } satisfies CouponValidationResult,
+    {
+      status: 400,
     }
+  );
+}
 
     const code =
       normalizeCode(
