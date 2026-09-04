@@ -489,10 +489,24 @@ export async function POST(
   request: Request
 ) {
   try {
-    const body =
-      (
-        await request.json()
-      ) as CreateBookingRequest;
+    let body: CreateBookingRequest;
+
+    try {
+      body =
+        (
+          await request.json()
+        ) as CreateBookingRequest;
+    } catch {
+      return Response.json(
+        {
+          error:
+            "Invalid JSON request body.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     /*
      * -----------------------------------------------------
