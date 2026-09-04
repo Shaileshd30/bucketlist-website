@@ -577,36 +577,66 @@ try {
      */
 
     if (
-      confirmation.manualReview
-    ) {
-      return Response.json(
-        {
-          error:
-            "Payment was received, but the requested seats are no longer available. Manual review is required.",
+  confirmation.manualReview
+) {
+  let manualReviewMessage =
+    "Payment was received, but the booking requires manual review. Our team will assist you.";
 
-          manualReview: true,
+  if (
+    confirmation.reason ===
+    "INSUFFICIENT_SEATS"
+  ) {
+    manualReviewMessage =
+      "Payment was received, but the requested seats are no longer available. Manual review is required.";
+  }
 
-          bookingId,
+  if (
+    confirmation.reason ===
+    "COUPON_USAGE_LIMIT_REACHED"
+  ) {
+    manualReviewMessage =
+      "Payment was received, but the coupon reached its usage limit while your payment was being completed. Our team will review your booking.";
+  }
 
-          availability: {
-            totalSeats:
-              confirmation.totalSeats,
+  if (
+    confirmation.reason ===
+    "COUPON_NOT_FOUND"
+  ) {
+    manualReviewMessage =
+      "Payment was received, but the coupon applied to this booking could no longer be verified. Our team will review your booking.";
+  }
 
-            bookedSeats:
-              confirmation.bookedSeats,
+  return Response.json(
+    {
+      error:
+        manualReviewMessage,
 
-            availableSeats:
-              confirmation.availableSeats,
+      manualReview: true,
 
-            requestedSeats:
-              confirmation.requestedSeats,
-          },
-        },
-        {
-          status: 409,
-        }
-      );
+      reason:
+        confirmation.reason,
+
+      bookingId,
+
+      availability: {
+        totalSeats:
+          confirmation.totalSeats,
+
+        bookedSeats:
+          confirmation.bookedSeats,
+
+        availableSeats:
+          confirmation.availableSeats,
+
+        requestedSeats:
+          confirmation.requestedSeats,
+      },
+    },
+    {
+      status: 409,
     }
+  );
+}
 
     /*
      * ---------------------------------------------
