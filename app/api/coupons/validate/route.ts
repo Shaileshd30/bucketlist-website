@@ -108,8 +108,28 @@ export async function POST(
   request: Request
 ) {
   try {
-    const body =
-      (await request.json()) as ValidateCouponRequest;
+    let body: ValidateCouponRequest;
+
+    try {
+      body =
+        (await request.json()) as ValidateCouponRequest;
+    } catch {
+      return Response.json(
+        {
+          valid: false,
+
+          message:
+            "Invalid JSON request body.",
+
+          discountAmount: 0,
+
+          finalAmount: 0,
+        } satisfies CouponValidationResult,
+        {
+          status: 400,
+        }
+      );
+    }
 
     const code =
       normalizeCode(
