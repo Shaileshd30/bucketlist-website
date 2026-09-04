@@ -296,14 +296,33 @@ export async function POST(
       );
     }
 
-    const body =
-      (await request.json()) as LoginRequest;
+    let body: LoginRequest;
 
-    const username =
-      body.username?.trim() || "";
+try {
+  body =
+    (await request.json()) as LoginRequest;
+} catch {
+  return Response.json(
+    {
+      error:
+        "Invalid JSON request body.",
+    },
+    {
+      status: 400,
 
-    const password =
-      body.password || "";
+      headers: {
+        "Cache-Control":
+          "no-store",
+      },
+    }
+  );
+}
+
+const username =
+  body.username?.trim() || "";
+
+const password =
+  body.password || "";
 
     const identifier =
       getClientIdentifier(
