@@ -299,8 +299,32 @@ export async function POST(
     let body: LoginRequest;
 
 try {
+  const parsedBody: unknown =
+    await request.json();
+
+  if (
+    parsedBody === null ||
+    typeof parsedBody !== "object" ||
+    Array.isArray(parsedBody)
+  ) {
+    return Response.json(
+      {
+        error:
+          "Invalid JSON request body.",
+      },
+      {
+        status: 400,
+
+        headers: {
+          "Cache-Control":
+            "no-store",
+        },
+      }
+    );
+  }
+
   body =
-    (await request.json()) as LoginRequest;
+    parsedBody as LoginRequest;
 } catch {
   return Response.json(
     {
