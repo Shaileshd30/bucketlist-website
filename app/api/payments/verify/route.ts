@@ -95,20 +95,39 @@ export async function POST(
 
     let body: VerifyPaymentRequest;
 
-    try {
-      body =
-        (await request.json()) as VerifyPaymentRequest;
-    } catch {
-      return Response.json(
-        {
-          error:
-            "Invalid JSON request body.",
-        },
-        {
-          status: 400,
-        }
-      );
+try {
+  const parsedBody: unknown =
+    await request.json();
+
+  if (
+    parsedBody === null ||
+    typeof parsedBody !== "object" ||
+    Array.isArray(parsedBody)
+  ) {
+    return Response.json(
+      {
+        error:
+          "Invalid JSON request body.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  body =
+    parsedBody as VerifyPaymentRequest;
+} catch {
+  return Response.json(
+    {
+      error:
+        "Invalid JSON request body.",
+    },
+    {
+      status: 400,
     }
+  );
+}
 
     const bookingId =
       body.bookingId?.trim();
@@ -656,15 +675,11 @@ export async function POST(
     );
 
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to verify payment.",
-      },
-      {
-        status: 500,
-      }
-    );
+  {
+    error:
+      "Unable to verify payment right now.",
+  },
+  {
+    status: 500,
   }
-}
+);
