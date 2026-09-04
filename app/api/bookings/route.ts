@@ -556,11 +556,12 @@ try {
       );
 
     if (
-      !Number.isInteger(
-        travelers
-      ) ||
-      travelers < 1
-    ) {
+  !Number.isInteger(
+    travelers
+  ) ||
+  travelers < 1 ||
+  travelers > 100
+) {
       return Response.json(
         {
           error:
