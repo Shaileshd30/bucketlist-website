@@ -93,8 +93,22 @@ export async function POST(
      * ---------------------------------------------
      */
 
-    const body =
-      (await request.json()) as VerifyPaymentRequest;
+    let body: VerifyPaymentRequest;
+
+    try {
+      body =
+        (await request.json()) as VerifyPaymentRequest;
+    } catch {
+      return Response.json(
+        {
+          error:
+            "Invalid JSON request body.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     const bookingId =
       body.bookingId?.trim();
