@@ -396,9 +396,9 @@ const deleteBatch = (batchId: string) => {
           ? {
               ...item,
               [field]: value
-                .split(/\n|,/)
-                .map((entry) => entry.trim())
-                .filter(Boolean),
+  .split(/\r?\n/)
+  .map((entry) => entry.trim())
+  .filter(Boolean),
             }
           : item
       )
@@ -1894,9 +1894,9 @@ const deleteBatch = (batchId: string) => {
                                   index,
                                   "highlights",
                                   event.target.value
-                                    .split(/\n|,/)
-                                    .map((value) => value.trim())
-                                    .filter(Boolean)
+  .split(/\r?\n/)
+  .map((value) => value.trim())
+  .filter(Boolean)
                                 )
                               }
                               rows={3}
