@@ -178,6 +178,22 @@ export async function POST(
         }
       );
     }
+    if (
+  payment.status !== "captured" ||
+  payment.captured !== true
+) {
+  console.error(
+    "payment.captured webhook contains a non-captured payment:",
+    payment.id
+  );
+
+  return Response.json({
+    ok: true,
+    ignored: true,
+    reason:
+      "PAYMENT_NOT_CAPTURED",
+  });
+}
 
     /*
      * Find the payment attempt we created
