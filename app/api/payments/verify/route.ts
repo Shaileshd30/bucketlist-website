@@ -668,18 +668,20 @@ try {
           confirmation.availableSeats,
       },
     });
-  } catch (error) {
+    } catch (error) {
     console.error(
       "POST /api/payments/verify failed:",
       error
     );
 
     return Response.json(
-  {
-    error:
-      "Unable to verify payment right now.",
-  },
-  {
-    status: 500,
+      {
+        error:
+          "Unable to verify payment right now.",
+      },
+      {
+        status: 500,
+      }
+    );
   }
-);
+}
