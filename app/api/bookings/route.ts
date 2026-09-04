@@ -560,6 +560,59 @@ try {
       Number(
         body.travelers
       );
+      const customerName =
+  body.customerName.trim();
+
+const normalizedPhone =
+  body.phone.replace(/\D/g, "");
+
+const normalizedEmail =
+  body.email.trim().toLowerCase();
+
+if (
+  customerName.length < 2 ||
+  customerName.length > 100
+) {
+  return Response.json(
+    {
+      error: "Please enter a valid customer name.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+if (
+  normalizedPhone.length < 10 ||
+  normalizedPhone.length > 15
+) {
+  return Response.json(
+    {
+      error: "Please enter a valid mobile number.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+const emailPattern =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (
+  normalizedEmail.length > 254 ||
+  !emailPattern.test(normalizedEmail)
+) {
+  return Response.json(
+    {
+      error: "Please enter a valid email address.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
 
     if (
   !Number.isInteger(
@@ -1101,17 +1154,13 @@ try {
         batch.return_date,
 
       customer_name:
-        body.customerName
-          .trim(),
+  customerName,
 
-      phone:
-        body.phone
-          .trim(),
+phone:
+  normalizedPhone,
 
-      email:
-        body.email
-          .trim()
-          .toLowerCase(),
+email:
+  normalizedEmail,
 
       travelers,
 
