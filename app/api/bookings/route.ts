@@ -1213,15 +1213,13 @@ try {
     );
 
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to create booking.",
-      },
-      {
-        status: 500,
-      }
-    );
+  {
+    error:
+      "Unable to create booking right now.",
+  },
+  {
+    status: 500,
   }
+);
+}
 }
