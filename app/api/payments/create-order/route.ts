@@ -75,20 +75,39 @@ export async function POST(
   try {
     let body: CreatePaymentOrderRequest;
 
-    try {
-      body =
-        (await request.json()) as CreatePaymentOrderRequest;
-    } catch {
-      return Response.json(
-        {
-          error:
-            "Invalid JSON request body.",
-        },
-        {
-          status: 400,
-        }
-      );
+try {
+  const parsedBody: unknown =
+    await request.json();
+
+  if (
+    parsedBody === null ||
+    typeof parsedBody !== "object" ||
+    Array.isArray(parsedBody)
+  ) {
+    return Response.json(
+      {
+        error:
+          "Invalid JSON request body.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  body =
+    parsedBody as CreatePaymentOrderRequest;
+} catch {
+  return Response.json(
+    {
+      error:
+        "Invalid JSON request body.",
+    },
+    {
+      status: 400,
     }
+  );
+}
 
     const bookingId =
       body.bookingId?.trim();
@@ -632,9 +651,7 @@ export async function POST(
     return Response.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Unable to create payment order.",
+          "Unable to create payment order right now.",
       },
       {
         status: 500,
