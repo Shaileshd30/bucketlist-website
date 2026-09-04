@@ -532,13 +532,19 @@ try {
      */
 
     if (
-      !body.tripId ||
-      !body.tripSlug ||
-      !body.batchId ||
-      !body.customerName ||
-      !body.phone ||
-      !body.email
-    ) {
+  typeof body.tripId !== "string" ||
+  !body.tripId.trim() ||
+  typeof body.tripSlug !== "string" ||
+  !body.tripSlug.trim() ||
+  typeof body.batchId !== "string" ||
+  !body.batchId.trim() ||
+  typeof body.customerName !== "string" ||
+  !body.customerName.trim() ||
+  typeof body.phone !== "string" ||
+  !body.phone.trim() ||
+  typeof body.email !== "string" ||
+  !body.email.trim()
+) {
       return Response.json(
         {
           error:
