@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import type { Booking } from "@/app/data/bookings";
 
 export const dynamic = "force-dynamic";
+const CURRENT_TERMS_VERSION = "2026-09-05";
 
 type CreateBookingRequest = {
   tripId: string;
@@ -17,7 +18,10 @@ type CreateBookingRequest = {
   travelers: number;
 
   couponCode?: string;
+  termsAccepted: boolean;
+
 };
+
 
 type TripRow = {
   id: string;
@@ -38,16 +42,16 @@ type BatchRow = {
   booked_seats: number;
 
   payment_mode:
-    | "FULL"
-    | "ADVANCE";
+  | "FULL"
+  | "ADVANCE";
 
   advance_amount:
-    | number
-    | string;
+  | number
+  | string;
 
   balance_due_date:
-    | string
-    | null;
+  | string
+  | null;
 
   status: string;
   visibility: string;
@@ -60,44 +64,44 @@ type CouponRow = {
   code: string;
 
   discount_type:
-    | "PERCENTAGE"
-    | "FIXED_AMOUNT";
+  | "PERCENTAGE"
+  | "FIXED_AMOUNT";
 
   discount_value:
-    | number
-    | string;
+  | number
+  | string;
 
   minimum_booking_amount:
-    | number
-    | string
-    | null;
+  | number
+  | string
+  | null;
 
   maximum_discount:
-    | number
-    | string
-    | null;
+  | number
+  | string
+  | null;
 
   valid_from:
-    | string
-    | null;
+  | string
+  | null;
 
   valid_until:
-    | string
-    | null;
+  | string
+  | null;
 
   usage_limit:
-    | number
-    | null;
+  | number
+  | null;
 
   used_count: number;
 
   status:
-    | "ACTIVE"
-    | "INACTIVE";
+  | "ACTIVE"
+  | "INACTIVE";
 
   scope:
-    | "ALL_TRIPS"
-    | "SELECTED_TRIPS";
+  | "ALL_TRIPS"
+  | "SELECTED_TRIPS";
 };
 
 type BookingRow = {
@@ -120,51 +124,51 @@ type BookingRow = {
   travelers: number;
 
   price_per_person:
-    | number
-    | string;
+  | number
+  | string;
 
   subtotal:
-    | number
-    | string;
+  | number
+  | string;
 
   coupon_code:
-    | string
-    | null;
+  | string
+  | null;
 
   discount_amount:
-    | number
-    | string;
+  | number
+  | string;
 
   total_amount:
-    | number
-    | string;
+  | number
+  | string;
 
   payment_mode:
-    | "FULL"
-    | "ADVANCE";
+  | "FULL"
+  | "ADVANCE";
 
   amount_payable_now:
-    | number
-    | string;
+  | number
+  | string;
 
   payment_status: string;
   booking_status: string;
 
   razorpay_order_id?:
-    | string
-    | null;
+  | string
+  | null;
 
   razorpay_payment_id?:
-    | string
-    | null;
+  | string
+  | null;
 
   payment_created_at?:
-    | string
-    | null;
+  | string
+  | null;
 
   payment_verified_at?:
-    | string
-    | null;
+  | string
+  | null;
 
   created_at: string;
   updated_at: string;
@@ -206,8 +210,8 @@ function calculateCouponDiscount(
   const maximumDiscount =
     coupon.maximum_discount !== null
       ? Number(
-          coupon.maximum_discount
-        )
+        coupon.maximum_discount
+      )
       : 0;
 
   if (
@@ -312,8 +316,8 @@ function mapBooking(
       undefined,
 
     paymentConfirmedAt:
-  row.payment_verified_at ||
-  undefined,
+      row.payment_verified_at ||
+      undefined,
 
     createdAt:
       row.created_at,
@@ -391,7 +395,7 @@ async function generateBookingId() {
 
         return Number(
           parts[
-            parts.length - 1
+          parts.length - 1
           ]
         );
       })
@@ -402,8 +406,8 @@ async function generateBookingId() {
   const nextNumber =
     existingNumbers.length > 0
       ? Math.max(
-          ...existingNumbers
-        ) + 1
+        ...existingNumbers
+      ) + 1
       : 1;
 
   return `${prefix}-${String(
@@ -491,39 +495,39 @@ export async function POST(
   try {
     let body: CreateBookingRequest;
 
-try {
-  const parsedBody: unknown =
-    await request.json();
+    try {
+      const parsedBody: unknown =
+        await request.json();
 
-  if (
-    parsedBody === null ||
-    typeof parsedBody !== "object" ||
-    Array.isArray(parsedBody)
-  ) {
-    return Response.json(
-      {
-        error:
-          "Invalid JSON request body.",
-      },
-      {
-        status: 400,
+      if (
+        parsedBody === null ||
+        typeof parsedBody !== "object" ||
+        Array.isArray(parsedBody)
+      ) {
+        return Response.json(
+          {
+            error:
+              "Invalid JSON request body.",
+          },
+          {
+            status: 400,
+          }
+        );
       }
-    );
-  }
 
-  body =
-    parsedBody as CreateBookingRequest;
-} catch {
-  return Response.json(
-    {
-      error:
-        "Invalid JSON request body.",
-    },
-    {
-      status: 400,
+      body =
+        parsedBody as CreateBookingRequest;
+    } catch {
+      return Response.json(
+        {
+          error:
+            "Invalid JSON request body.",
+        },
+        {
+          status: 400,
+        }
+      );
     }
-  );
-}
 
     /*
      * -----------------------------------------------------
@@ -532,19 +536,19 @@ try {
      */
 
     if (
-  typeof body.tripId !== "string" ||
-  !body.tripId.trim() ||
-  typeof body.tripSlug !== "string" ||
-  !body.tripSlug.trim() ||
-  typeof body.batchId !== "string" ||
-  !body.batchId.trim() ||
-  typeof body.customerName !== "string" ||
-  !body.customerName.trim() ||
-  typeof body.phone !== "string" ||
-  !body.phone.trim() ||
-  typeof body.email !== "string" ||
-  !body.email.trim()
-) {
+      typeof body.tripId !== "string" ||
+      !body.tripId.trim() ||
+      typeof body.tripSlug !== "string" ||
+      !body.tripSlug.trim() ||
+      typeof body.batchId !== "string" ||
+      !body.batchId.trim() ||
+      typeof body.customerName !== "string" ||
+      !body.customerName.trim() ||
+      typeof body.phone !== "string" ||
+      !body.phone.trim() ||
+      typeof body.email !== "string" ||
+      !body.email.trim()
+    ) {
       return Response.json(
         {
           error:
@@ -556,71 +560,86 @@ try {
       );
     }
 
+    if (
+      body.termsAccepted !== true
+    ) {
+      return Response.json(
+        {
+          error:
+            "You must accept the Terms and Conditions to continue.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
     const travelers =
       Number(
         body.travelers
       );
-      const customerName =
-  body.customerName.trim();
 
-const normalizedPhone =
-  body.phone.replace(/\D/g, "");
+    const customerName =
+      body.customerName.trim();
 
-const normalizedEmail =
-  body.email.trim().toLowerCase();
+    const normalizedPhone =
+      body.phone.replace(/\D/g, "");
 
-if (
-  customerName.length < 2 ||
-  customerName.length > 100
-) {
-  return Response.json(
-    {
-      error: "Please enter a valid customer name.",
-    },
-    {
-      status: 400,
-    }
-  );
-}
-
-if (
-  normalizedPhone.length < 10 ||
-  normalizedPhone.length > 15
-) {
-  return Response.json(
-    {
-      error: "Please enter a valid mobile number.",
-    },
-    {
-      status: 400,
-    }
-  );
-}
-
-const emailPattern =
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-if (
-  normalizedEmail.length > 254 ||
-  !emailPattern.test(normalizedEmail)
-) {
-  return Response.json(
-    {
-      error: "Please enter a valid email address.",
-    },
-    {
-      status: 400,
-    }
-  );
-}
+    const normalizedEmail =
+      body.email.trim().toLowerCase();
 
     if (
-  !Number.isInteger(
-    travelers
-  ) ||
-  travelers < 1 ||
-  travelers > 100
-) {
+      customerName.length < 2 ||
+      customerName.length > 100
+    ) {
+      return Response.json(
+        {
+          error: "Please enter a valid customer name.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      normalizedPhone.length < 10 ||
+      normalizedPhone.length > 15
+    ) {
+      return Response.json(
+        {
+          error: "Please enter a valid mobile number.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (
+      normalizedEmail.length > 254 ||
+      !emailPattern.test(normalizedEmail)
+    ) {
+      return Response.json(
+        {
+          error: "Please enter a valid email address.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        travelers
+      ) ||
+      travelers < 1 ||
+      travelers > 100
+    ) {
       return Response.json(
         {
           error:
@@ -724,9 +743,9 @@ if (
 
     if (
       batch.status !==
-        "OPEN" ||
+      "OPEN" ||
       batch.visibility !==
-        "PUBLIC" ||
+      "PUBLIC" ||
       !batch.booking_enabled
     ) {
       return Response.json(
@@ -761,7 +780,7 @@ if (
       Math.max(
         0,
         totalSeats -
-          bookedSeats
+        bookedSeats
       );
 
     if (
@@ -770,11 +789,10 @@ if (
     ) {
       return Response.json(
         {
-          error: `Only ${availableSeats} seat${
-            availableSeats === 1
-              ? ""
-              : "s"
-          } are currently available.`,
+          error: `Only ${availableSeats} seat${availableSeats === 1
+            ? ""
+            : "s"
+            } are currently available.`,
         },
         {
           status: 409,
@@ -946,9 +964,9 @@ if (
        */
       if (
         coupon.usage_limit !==
-          null &&
+        null &&
         coupon.used_count >=
-          coupon.usage_limit
+        coupon.usage_limit
       ) {
         return Response.json(
           {
@@ -1001,7 +1019,7 @@ if (
         const {
           data: relation,
           error:
-            relationError,
+          relationError,
         } = await supabaseAdmin
           .from(
             "coupon_trips"
@@ -1060,7 +1078,7 @@ if (
       Math.max(
         0,
         subtotal -
-          discountAmount
+        discountAmount
       );
 
     /*
@@ -1081,11 +1099,11 @@ if (
 
     const amountPayableNow =
       batch.payment_mode ===
-      "ADVANCE"
+        "ADVANCE"
         ? Math.min(
-            normalAdvance,
-            totalAmount
-          )
+          normalAdvance,
+          totalAmount
+        )
         : totalAmount;
 
     if (
@@ -1154,13 +1172,13 @@ if (
         batch.return_date,
 
       customer_name:
-  customerName,
+        customerName,
 
-phone:
-  normalizedPhone,
+      phone:
+        normalizedPhone,
 
-email:
-  normalizedEmail,
+      email:
+        normalizedEmail,
 
       travelers,
 
@@ -1190,6 +1208,11 @@ email:
 
       booking_status:
         "PENDING",
+        terms_accepted_at:
+  now,
+
+terms_version:
+  CURRENT_TERMS_VERSION,
 
       created_at:
         now,
@@ -1200,10 +1223,10 @@ email:
 
     const {
       data:
-        insertedBookingData,
+      insertedBookingData,
 
       error:
-        bookingInsertError,
+      bookingInsertError,
     } = await supabaseAdmin
       .from("bookings")
       .insert(
@@ -1269,13 +1292,13 @@ email:
     );
 
     return Response.json(
-  {
-    error:
-      "Unable to create booking right now.",
-  },
-  {
-    status: 500,
+      {
+        error:
+          "Unable to create booking right now.",
+      },
+      {
+        status: 500,
+      }
+    );
   }
-);
-}
 }
