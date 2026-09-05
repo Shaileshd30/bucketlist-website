@@ -540,6 +540,7 @@ export default function BookingPageClient() {
         email: customer.email.trim(),
         travelers: validTravelerCount,
         couponCode: appliedCoupon?.code || undefined,
+        termsAccepted: acceptedTerms,
       };
 
       const response = await fetch("/api/bookings", {
