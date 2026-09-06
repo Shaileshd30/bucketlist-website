@@ -338,7 +338,7 @@ export default function BookingPageClient() {
 
       setCouponMessage(
         data.message ||
-          `Coupon ${data.code || normalizedCode} applied successfully.`
+        `Coupon ${data.code || normalizedCode} applied successfully.`
       );
     } catch {
       setAppliedCoupon(null);
@@ -358,25 +358,21 @@ export default function BookingPageClient() {
     setCouponError("");
   };
 
-  /*
-   * If traveler quantity changes after a coupon has been applied,
-   * remove it. The customer must apply it again because eligibility
-   * and discount may depend on the booking amount.
-   */
-  useEffect(() => {
-    if (!appliedCoupon) {
+  const updateTravelerCount = (nextCount: number) => {
+    if (nextCount === validTravelerCount) {
       return;
     }
 
-    setAppliedCoupon(null);
-    setCouponMessage("");
-    setCouponError(
-      "Traveler count changed. Please apply your coupon again."
-    );
+    setTravelerCount(nextCount);
 
-    // We intentionally react only to traveler count changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validTravelerCount]);
+    if (appliedCoupon) {
+      setAppliedCoupon(null);
+      setCouponMessage("");
+      setCouponError(
+        "Traveler count changed. Please apply your coupon again."
+      );
+    }
+  };
 
   const verifyPayment = async (
     bookingId: string,
@@ -493,7 +489,7 @@ export default function BookingPageClient() {
         setIsProcessingPayment(false);
         setPaymentError(
           response.error?.description ||
-            "Payment failed. Please retry using another payment method."
+          "Payment failed. Please retry using another payment method."
         );
       });
 
@@ -647,7 +643,7 @@ export default function BookingPageClient() {
             {formatDate(batch.departureDate)}
 
             {batch.returnDate &&
-            batch.returnDate !== batch.departureDate
+              batch.returnDate !== batch.departureDate
               ? ` – ${formatDate(batch.returnDate)}`
               : ""}
           </p>
@@ -749,7 +745,7 @@ export default function BookingPageClient() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3">
                   <button
                     type="button"
                     disabled={
@@ -757,13 +753,16 @@ export default function BookingPageClient() {
                       validTravelerCount <= 1
                     }
                     onClick={() =>
-                      setTravelerCount((current) =>
-                        Math.max(1, current - 1)
+                      updateTravelerCount(
+                        Math.max(
+                          1,
+                          validTravelerCount - 1
+                        )
                       )
                     }
                     className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-lg font-bold disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    −
+                    &minus;
                   </button>
 
                   <span className="min-w-8 text-center text-xl font-bold">
@@ -777,10 +776,10 @@ export default function BookingPageClient() {
                       validTravelerCount >= availableSeats
                     }
                     onClick={() =>
-                      setTravelerCount((current) =>
+                      updateTravelerCount(
                         Math.min(
                           availableSeats,
-                          current + 1
+                          validTravelerCount + 1
                         )
                       )
                     }

@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   defaultTrips,
-  travelCategories,
   type TripData,
 } from "./data/trips";
 
@@ -80,17 +80,6 @@ export default function Home() {
     }
 
     return Math.min(...prices);
-  };
-
-  const getLowestCategoryPrice = (
-    category: NonNullable<TripData["travelCategory"]>
-  ) => {
-    return getLowestActivePrice(
-      trips.filter(
-        (trip) =>
-          trip.travelCategory === category
-      )
-    );
   };
 
   const lowestAdventurePrice =
@@ -473,7 +462,7 @@ export default function Home() {
     <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-4 sm:px-6 sm:py-5 lg:px-10 lg:py-7">
 
       {/* Logo */}
-      <a
+      <Link
         href="/"
         className="relative block h-12 w-40 sm:h-14 sm:w-44 lg:h-16 lg:w-52"
         
@@ -486,16 +475,16 @@ export default function Home() {
           className="object-contain object-left"
           sizes="(max-width: 640px) 160px, (max-width: 1024px) 176px, 208px"
         />
-      </a>
+      </Link>
 
       {/* Desktop nav */}
       <nav className="hidden items-center gap-8 rounded-full border border-white/15 bg-black/10 px-7 py-3 text-sm font-medium text-white/90 backdrop-blur-md lg:flex">
-        <a
+        <Link
           href="/about"
           className="transition hover:text-orange-400"
         >
           About
-        </a>
+        </Link>
 
         <a
           href="#destinations"
@@ -575,7 +564,7 @@ export default function Home() {
       }`}
     >
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-        <a
+        <Link
           href="/"
           onClick={() => setMobileMenuOpen(false)}
           className="relative block h-12 w-44"
@@ -587,7 +576,7 @@ export default function Home() {
             className="object-contain object-left"
             sizes="176px"
           />
-        </a>
+        </Link>
 
         <button
           type="button"
@@ -668,13 +657,13 @@ export default function Home() {
         {/* Hero buttons */}
         <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
 
-          <a
+          <Link
             href="/trips"
             className="hero-button inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-4 text-sm font-bold text-[#17251d] transition duration-300 hover:bg-orange-400 hover:text-white sm:w-auto sm:px-7"
           >
             Explore Adventures
             <span className="ml-3 text-lg">↗</span>
-          </a>
+          </Link>
 
           <a
             href="https://wa.me/918482846287"
@@ -1016,12 +1005,12 @@ export default function Home() {
               >
                 {featuredTrip.cta}
               </a>
-              <a
+              <Link
                 href="/trips"
                 className="inline-flex items-center justify-center rounded-full border border-[#17251d]/15 bg-white px-6 py-4 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
               >
                 Explore all trips
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -1059,25 +1048,25 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <a
+                <Link
                   href="/treks-near-pune"
                   className="inline-flex items-center justify-center rounded-full bg-[#17251d] px-6 py-4 text-sm font-semibold text-white transition hover:bg-orange-500"
                 >
                   Explore Treks Near Pune
                   <span className="ml-3">↗</span>
-                </a>
+                </Link>
 
-                <a
+                <Link
                   href="/trips"
                   className="inline-flex items-center justify-center rounded-full border border-[#17251d]/15 bg-white px-6 py-4 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
                 >
                   View All Adventures
-                </a>
+                </Link>
               </div>
             </div>
 
             {/* VISUAL CARD */}
-            <a
+            <Link
               href="/treks-near-pune"
               className="group relative min-h-[400px] overflow-hidden rounded-[32px] bg-[#17251d] shadow-[0_28px_80px_rgba(0,0,0,0.12)] sm:min-h-[500px]"
             >
@@ -1119,7 +1108,7 @@ export default function Home() {
                   </span>
                 </div>
               </div>
-            </a>
+            </Link>
 
           </div>
         </div>
@@ -1271,13 +1260,13 @@ export default function Home() {
       </h2>
     </div>
 
-    <a
+    <Link
       href="/trips"
       className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
     >
       View all adventures
       <span className="ml-2">↗</span>
-    </a>
+    </Link>
   </div>
 
   {(() => {
@@ -2180,13 +2169,13 @@ export default function Home() {
           and the kind of memories you want to bring home.
         </p>
 
-        <a
+        <Link
           href="/trips"
           className="mt-6 inline-flex items-center text-sm font-semibold text-orange-300 transition hover:text-white"
         >
           Explore all adventures
           <span className="ml-2">↗</span>
-        </a>
+        </Link>
       </div>
     </div>
 
@@ -2194,7 +2183,7 @@ export default function Home() {
     <div className="grid gap-5 lg:grid-cols-12">
 
       {/* HIMALAYAN EXPEDITIONS — LARGE FEATURE */}
-      <a
+      <Link
         href="/trips"
         className="group relative min-h-[520px] overflow-hidden rounded-[32px] border border-white/10 lg:col-span-7 lg:min-h-[650px]"
       >
@@ -2239,13 +2228,13 @@ export default function Home() {
             </span>
           </div>
         </div>
-      </a>
+      </Link>
 
       {/* RIGHT COLUMN */}
       <div className="grid gap-5 lg:col-span-5">
 
         {/* WEEKEND TREKS */}
-        <a
+        <Link
           href="/trips"
           className="group relative min-h-[310px] overflow-hidden rounded-[32px] border border-white/10"
         >
@@ -2284,10 +2273,10 @@ export default function Home() {
               </span>
             </div>
           </div>
-        </a>
+        </Link>
 
         {/* ROAD JOURNEYS */}
-        <a
+        <Link
           href="/trips"
           className="group relative min-h-[310px] overflow-hidden rounded-[32px] border border-white/10"
         >
@@ -2326,7 +2315,7 @@ export default function Home() {
               </span>
             </div>
           </div>
-        </a>
+        </Link>
 
       </div>
     </div>
@@ -2335,7 +2324,7 @@ export default function Home() {
     <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
 
       {/* BACKPACKING */}
-      <a
+      <Link
         href="/trips"
         className="group relative min-h-[390px] overflow-hidden rounded-[30px] border border-white/10"
       >
@@ -2372,7 +2361,7 @@ export default function Home() {
             <span className="text-xl">↗</span>
           </div>
         </div>
-      </a>
+      </Link>
 
       {/* CUSTOM JOURNEYS */}
       <a
@@ -2993,9 +2982,9 @@ export default function Home() {
         </p>
 
         <div className="mt-5 flex flex-col gap-3 text-sm text-white/60">
-          <a href="/about" className="transition hover:text-white">
+          <Link href="/about" className="transition hover:text-white">
             About Us
-          </a>
+          </Link>
 
           <a href="#destinations" className="transition hover:text-white">
             Destinations
@@ -3005,9 +2994,9 @@ export default function Home() {
             Upcoming Adventures
           </a>
 
-          <a href="/trips" className="transition hover:text-white">
+          <Link href="/trips" className="transition hover:text-white">
             All Trips
-          </a>
+          </Link>
 
           <a href="#contact" className="transition hover:text-white">
             Contact
@@ -3022,17 +3011,17 @@ export default function Home() {
         </p>
 
         <div className="mt-5 flex flex-col gap-3 text-sm text-white/60">
-          <a href="/trips" className="transition hover:text-white">
+          <Link href="/trips" className="transition hover:text-white">
             Weekend Treks
-          </a>
+          </Link>
 
-          <a href="/trips" className="transition hover:text-white">
+          <Link href="/trips" className="transition hover:text-white">
             Himalayan Expeditions
-          </a>
+          </Link>
 
-          <a href="/trips" className="transition hover:text-white">
+          <Link href="/trips" className="transition hover:text-white">
             Road Journeys
-          </a>
+          </Link>
 
           <a
             href="https://wa.me/918482846287"
@@ -3189,26 +3178,26 @@ export default function Home() {
       </p>
 
       <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <a
+        <Link
   href="/privacy-policy"
   className="transition hover:text-white"
 >
   Privacy Policy
-</a>
+</Link>
 
-<a
+<Link
   href="/terms-and-conditions"
   className="transition hover:text-white"
 >
   Terms & Conditions
-</a>
+</Link>
 
-<a
+<Link
   href="/cancellation-policy"
   className="transition hover:text-white"
 >
   Cancellation & Refund Policy
-</a>
+</Link>
       </div>
     </div>
 

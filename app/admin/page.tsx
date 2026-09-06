@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import CouponManager from "./components/CouponManager";
 import { useEffect, useState } from "react";
 import {
@@ -1062,12 +1064,12 @@ const deleteBatch = (batchId: string) => {
 </button>
           </form>
 
-          <a
+          <Link
             href="/"
             className="mt-6 inline-flex w-full items-center justify-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
           >
             Back to homepage
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -1149,12 +1151,12 @@ const deleteBatch = (batchId: string) => {
               {isDeletingTrip ? "Deleting..." : "Delete trip"}
             </button>
 
-            <a
+            <Link
               href="/"
               className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
             >
               View homepage
-            </a>
+            </Link>
           </div>
         </div>
 

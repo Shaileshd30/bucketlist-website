@@ -1208,7 +1208,7 @@ export default async function TreksNearPunePage() {
             <div className="space-y-3">
 
               {faqs.map(
-                (faq, index) => (
+                (faq) => (
                   <details
                     key={
                       faq.question

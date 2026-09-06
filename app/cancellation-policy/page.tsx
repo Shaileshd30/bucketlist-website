@@ -191,7 +191,7 @@ export default function CancellationPolicyPage() {
               <p>
                 If a third-party service provider imposes a cancellation charge
                 or retains an advance payment, such non-recoverable amounts may
-                be deducted from the customer's refund.
+                be deducted from the customer&apos;s refund.
               </p>
             </PolicySection>
 
@@ -296,7 +296,7 @@ export default function CancellationPolicyPage() {
               <p>
                 Refund eligibility is calculated from the scheduled departure
                 date and the date on which Bucketlist Adventure receives the
-                customer's written cancellation request.
+                customer&apos;s written cancellation request.
               </p>
             </PolicySection>
 

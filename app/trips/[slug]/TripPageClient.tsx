@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { defaultTrips, type DayWiseItineraryItem, type TripBatch, type TripData } from "../../data/trips";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type BookingFormState = {
   name: string;
@@ -60,6 +62,7 @@ const safePdfFileName = (value: string) =>
     .replace(/^-|-$/g, "") || "trip";
 
 export function TripPageClient({ trip }: { trip: TripData }) {
+  const router = useRouter();
   const brandLogo = "/bucketlist-logo.png";
   const pdfLogo = "/icon.png";
   const pageRef = useRef<HTMLElement | null>(null);
@@ -77,19 +80,6 @@ export function TripPageClient({ trip }: { trip: TripData }) {
     message: `I'm interested in ${trip.title}. Please share the available dates and details.`,
   });
 
-  useEffect(() => {
-    const gallery =
-      trip.gallery && trip.gallery.length > 0
-        ? trip.gallery
-        : [trip.image].filter(Boolean);
-
-    setSelectedImage((current) =>
-      current && gallery.includes(current)
-        ? current
-        : gallery[0] || trip.image || ""
-    );
-  }, [trip]);
-
   const gallery = useMemo(() => {
     const items =
       trip.gallery && trip.gallery.length > 0
@@ -99,14 +89,22 @@ export function TripPageClient({ trip }: { trip: TripData }) {
     return Array.from(new Set(items.filter(Boolean)));
   }, [trip]);
 
-  const primaryImage = selectedImage || gallery[0] || trip.image;
+  const primaryImage =
+    selectedImage && gallery.includes(selectedImage)
+      ? selectedImage
+      : gallery[0] || trip.image;
 
   const overview = trip.overview || trip.description || "";
   const itinerary = trip.itinerary || [];
-  const includes = trip.includes || [];
-  const excludes = trip.notIncludes || [];
+  const includes = useMemo(
+    () => trip.includes || [],
+    [trip.includes]
+  ); const excludes = trip.notIncludes || [];
   const pickupPoints = trip.pickupPoints || [];
-  const thingsToCarry = trip.thingsToCarry || [];
+  const thingsToCarry = useMemo(
+    () => trip.thingsToCarry || [],
+    [trip.thingsToCarry]
+  );
   const medicalDisclaimer = trip.medicalDisclaimer || [];
   const rules = trip.rules || [];
 
@@ -137,40 +135,32 @@ export function TripPageClient({ trip }: { trip: TripData }) {
       );
   }, [trip]);
 
-  /*
-   * Select the first available batch automatically.
-   */
-  useEffect(() => {
-    if (availableBatches.length === 0) {
-      setSelectedBatchId("");
-      return;
-    }
-
-    setSelectedBatchId((current) => {
-      const stillAvailable = availableBatches.some(
-        (batch) => batch.id === current
-      );
-
-      return stillAvailable ? current : availableBatches[0].id;
-    });
-  }, [availableBatches]);
-
   const selectedBatch: TripBatch | null =
-    availableBatches.find((batch) => batch.id === selectedBatchId) || null;
-    const nextBatch = availableBatches[0] || null;
+    availableBatches.find(
+      (batch) => batch.id === selectedBatchId
+    ) ||
+    availableBatches[0] ||
+    null;
 
-const displayBatch = selectedBatch || nextBatch;
+  const nextBatch = availableBatches[0] || null;
 
-const displayDuration = trip.durationDays
-  ? `${trip.durationDays} ${trip.durationDays === 1 ? "Day" : "Days"}`
-  : trip.duration || "Flexible";
+  const displayBatch =
+    selectedBatch || nextBatch;
 
-const displayAvailableSeats = displayBatch
-  ? Math.max(
+  const displayDuration = trip.durationDays
+    ? `${trip.durationDays} ${trip.durationDays === 1
+      ? "Day"
+      : "Days"
+    }`
+    : trip.duration || "Flexible";
+
+  const displayAvailableSeats = displayBatch
+    ? Math.max(
       0,
-      displayBatch.totalSeats - (displayBatch.bookedSeats || 0)
+      displayBatch.totalSeats -
+      (displayBatch.bookedSeats || 0)
     )
-  : null;
+    : null;
 
   /*
    * Helpers
@@ -199,10 +189,10 @@ const displayAvailableSeats = displayBatch
   );
 
   const currentPrice =
-  displayBatch?.price ??
-  (trip.price
-    ? Number(trip.price.replace(/[^0-9]/g, "")) || 0
-    : 0);
+    displayBatch?.price ??
+    (trip.price
+      ? Number(trip.price.replace(/[^0-9]/g, "")) || 0
+      : 0);
 
   const totalAmount = currentPrice * travelerCount;
 
@@ -358,7 +348,7 @@ const displayAvailableSeats = displayBatch
       travelers: String(travelerCount),
     });
 
-    window.location.href = `/book?${params.toString()}`;
+    router.push(`/book?${params.toString()}`);
   };
 
   const isDayWiseItineraryItem = (
@@ -509,48 +499,6 @@ const displayAvailableSeats = displayBatch
     );
   };
 
-  const buildDownloadableItinerary = () => {
-    const lines: string[] = [
-      trip.title,
-      trip.subtitle || "",
-      "",
-      `Duration: ${displayDuration}`,
-      trip.startPoint ? `Start point: ${trip.startPoint}` : "",
-      trip.destination ? `Destination: ${trip.destination}` : "",
-      "",
-      "ITINERARY",
-      "",
-    ].filter(Boolean);
-
-    if (hasDayWiseItinerary) {
-      dayWiseItinerary.forEach((day, index) => {
-        lines.push(
-          `DAY ${day.day || index + 1}: ${day.title}`,
-          day.location ? `Location: ${day.location}` : "",
-          day.description,
-          ...(day.highlights?.length
-            ? ["Highlights:", ...day.highlights.map((item) => `- ${item}`)]
-            : []),
-          ""
-        );
-      });
-    } else {
-      itinerary.forEach((item, index) => {
-        if (typeof item === "string") {
-          lines.push(`${index + 1}. ${item}`);
-          return;
-        }
-
-        if ("activity" in item) {
-          lines.push(
-            `${item.time ? `${item.time} - ` : ""}${item.activity}`
-          );
-        }
-      });
-    }
-
-    return lines.filter((line) => line !== undefined).join("\n");
-  };
 
   const downloadItinerary = async () => {
     if (isDownloadingPdf) return;
@@ -880,10 +828,10 @@ const displayAvailableSeats = displayBatch
           const cardHeight = Math.max(
             imageData ? 47 : 0,
             19 +
-              titleLinesForCard.length * 4.6 +
-              (location ? 4.5 : 0) +
-              Math.min(descriptionLines.length, 5) * 4.2 +
-              (highlightLines.length ? Math.min(highlightLines.length, 2) * 4 + 6 : 0)
+            titleLinesForCard.length * 4.6 +
+            (location ? 4.5 : 0) +
+            Math.min(descriptionLines.length, 5) * 4.2 +
+            (highlightLines.length ? Math.min(highlightLines.length, 2) * 4 + 6 : 0)
           );
 
           y = ensureSpace(y, cardHeight + 5);
@@ -1081,11 +1029,11 @@ const displayAvailableSeats = displayBatch
           const boxHeight = Math.max(
             28,
             15 +
-              prepared.reduce(
-                (total, lines) =>
-                  total + Math.min(lines.length, 2) * 4 + 2,
-                0
-              )
+            prepared.reduce(
+              (total, lines) =>
+                total + Math.min(lines.length, 2) * 4 + 2,
+              0
+            )
           );
 
           pdf.setFillColor(...soft);
@@ -1250,7 +1198,7 @@ const displayAvailableSeats = displayBatch
                   </p>
 
                   <p className="mt-2 font-semibold">
-                      {displayBatch
+                    {displayBatch
                       ? formatDate(displayBatch.departureDate)
                       : "On request"}
                   </p>
@@ -1279,12 +1227,10 @@ const displayAvailableSeats = displayBatch
 
                 <a
                   href={`https://wa.me/918482846287?text=${encodeURIComponent(
-                    `Hi Bucketlist Adventure, I'm interested in ${
-                      trip.title
-                    }${
-                      selectedBatch
-                        ? ` for ${formatDate(selectedBatch.departureDate)}`
-                        : ""
+                    `Hi Bucketlist Adventure, I'm interested in ${trip.title
+                    }${selectedBatch
+                      ? ` for ${formatDate(selectedBatch.departureDate)}`
+                      : ""
                     }. We are ${travelerCount} traveler(s). Please share the details.`
                   )}`}
                   target="_blank"
@@ -1331,17 +1277,19 @@ const displayAvailableSeats = displayBatch
                     key={`${image}-${index}`}
                     type="button"
                     onClick={() => setSelectedImage(image)}
-                    className={`overflow-hidden rounded-[18px] border transition ${
-                      primaryImage === image
-                        ? "border-orange-500 ring-2 ring-orange-200"
-                        : "border-black/10"
-                    }`}
+                    className={`overflow-hidden rounded-[18px] border transition ${primaryImage === image
+                      ? "border-orange-500 ring-2 ring-orange-200"
+                      : "border-black/10"
+                      }`}
                   >
-                    <div className="h-28 w-full overflow-hidden bg-[#f7f5f2]">
-                      <img
+                    <div className="relative h-28 w-full overflow-hidden bg-[#f7f5f2]">
+                      <Image
                         src={image}
                         alt={`${trip.title} thumbnail ${index + 1}`}
-                        className="h-full w-full object-cover object-center"
+                        fill
+                        sizes="(max-width: 640px) 50vw, 224px"
+                        unoptimized
+                        className="object-cover object-center"
                       />
                     </div>
                   </button>
@@ -1366,11 +1314,14 @@ const displayAvailableSeats = displayBatch
                 Close
               </button>
 
-              <div className="flex h-[75vh] w-full items-center justify-center bg-[#0d1411]">
-                <img
+              <div className="relative flex h-[75vh] w-full items-center justify-center bg-[#0d1411]">
+                <Image
                   src={primaryImage}
                   alt={`${trip.title} full size`}
-                  className="max-h-full max-w-full object-contain"
+                  fill
+                  sizes="100vw"
+                  unoptimized
+                  className="object-contain"
                 />
               </div>
             </div>
@@ -1382,9 +1333,11 @@ const displayAvailableSeats = displayBatch
             <div className="flex flex-col gap-5 border-b border-black/10 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-5">
                 <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#17251d] p-2 sm:h-24 sm:w-40">
-                  <img
+                  <Image
                     src={brandLogo}
                     alt="Bucketlist Adventure"
+                    width={160}
+                    height={96}
                     className="h-full w-full object-contain"
                   />
                 </div>
@@ -1413,7 +1366,7 @@ const displayAvailableSeats = displayBatch
                   {isDownloadingPdf ? "Preparing PDF..." : "↓ Download PDF"}
                 </button>
 
-                
+
                 <button
                   type="button"
                   onClick={expandAllItineraryDays}
@@ -1490,11 +1443,10 @@ const displayAvailableSeats = displayBatch
                     {expanded && (
                       <div className="border-t border-black/10 bg-white p-5 sm:p-7 lg:p-8">
                         <div
-                          className={`grid gap-7 ${
-                            day.image
-                              ? "lg:grid-cols-[1.05fr_0.95fr] lg:items-start"
-                              : ""
-                          }`}
+                          className={`grid gap-7 ${day.image
+                            ? "lg:grid-cols-[1.05fr_0.95fr] lg:items-start"
+                            : ""
+                            }`}
                         >
                           <div>
                             <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
@@ -1527,11 +1479,14 @@ const displayAvailableSeats = displayBatch
                           </div>
 
                           {day.image ? (
-                            <div className="overflow-hidden rounded-[22px] border border-black/10 bg-[#f7f5f2]">
-                              <img
+                            <div className="relative h-72 overflow-hidden rounded-[22px] border border-black/10 bg-[#f7f5f2] sm:h-80 lg:h-[360px]">
+                              <Image
                                 src={day.image}
                                 alt={`${trip.title} - Day ${day.day || index + 1}`}
-                                className="h-72 w-full object-cover sm:h-80 lg:h-[360px]"
+                                fill
+                                sizes="(max-width: 1024px) 100vw, 800px"
+                                unoptimized
+                                className="object-cover"
                               />
                             </div>
                           ) : null}
@@ -1693,7 +1648,7 @@ const displayAvailableSeats = displayBatch
                         {isDownloadingPdf ? "Preparing PDF..." : "↓ Download PDF"}
                       </button>
 
-                      
+
                     </div>
                   </div>
 
@@ -1874,7 +1829,7 @@ const displayAvailableSeats = displayBatch
 
                   <div className="space-y-3">
                     {availableBatches.map((batch) => {
-                      const selected = batch.id === selectedBatchId;
+                      const selected = batch.id === selectedBatch?.id;
 
                       return (
                         <button
@@ -1883,11 +1838,10 @@ const displayAvailableSeats = displayBatch
                           onClick={() =>
                             setSelectedBatchId(batch.id)
                           }
-                          className={`w-full rounded-2xl border p-4 text-left transition ${
-                            selected
-                              ? "border-orange-400 bg-orange-400/15"
-                              : "border-white/10 bg-white/5 hover:border-white/30"
-                          }`}
+                          className={`w-full rounded-2xl border p-4 text-left transition ${selected
+                            ? "border-orange-400 bg-orange-400/15"
+                            : "border-white/10 bg-white/5 hover:border-white/30"
+                            }`}
                         >
                           <div className="flex items-center justify-between gap-4">
                             <div>
@@ -1897,11 +1851,11 @@ const displayAvailableSeats = displayBatch
 
                               {batch.returnDate !==
                                 batch.departureDate && (
-                                <p className="mt-1 text-xs text-white/60">
-                                  Returns{" "}
-                                  {formatDate(batch.returnDate)}
-                                </p>
-                              )}
+                                  <p className="mt-1 text-xs text-white/60">
+                                    Returns{" "}
+                                    {formatDate(batch.returnDate)}
+                                  </p>
+                                )}
                             </div>
 
                             <p className="font-bold text-orange-300">
@@ -1968,7 +1922,7 @@ const displayAvailableSeats = displayBatch
                       Advance required:{" "}
                       {formatPrice(
                         selectedBatch.advanceAmount *
-                          travelerCount
+                        travelerCount
                       )}
                     </p>
                   )}
@@ -1999,14 +1953,12 @@ const displayAvailableSeats = displayBatch
               {/* WHATSAPP */}
               <a
                 href={`https://wa.me/918482846287?text=${encodeURIComponent(
-                  `Hi Bucketlist Adventure, I'm interested in ${
-                    trip.title
-                  }${
-                    selectedBatch
-                      ? ` for ${formatDate(
-                          selectedBatch.departureDate
-                        )}`
-                      : ""
+                  `Hi Bucketlist Adventure, I'm interested in ${trip.title
+                  }${selectedBatch
+                    ? ` for ${formatDate(
+                      selectedBatch.departureDate
+                    )}`
+                    : ""
                   }. We are ${travelerCount} traveler(s). Please share the details.`
                 )}`}
                 target="_blank"
@@ -2038,10 +1990,10 @@ const displayAvailableSeats = displayBatch
                   <span>Seats</span>
 
                   <span className="font-semibold text-white">
-                   {displayAvailableSeats !== null
-                   ? `${displayAvailableSeats} available`
-                   : trip.seats || "On request"}
-                   </span>
+                    {displayAvailableSeats !== null
+                      ? `${displayAvailableSeats} available`
+                      : trip.seats || "On request"}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -2056,38 +2008,38 @@ const displayAvailableSeats = displayBatch
 
             {/* INCLUDED */}
             {!hasDayWiseItinerary && (
-            <div className="rounded-[28px] border border-black/10 bg-white p-8">
-              <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
-                Included
-              </p>
+              <div className="rounded-[28px] border border-black/10 bg-white p-8">
+                <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                  Included
+                </p>
 
-              <ul className="space-y-3 text-[#17251d]">
-                {includes.map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1 text-orange-500">✓</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                <ul className="space-y-3 text-[#17251d]">
+                  {includes.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="mt-1 text-orange-500">✓</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {/* NOT INCLUDED */}
             {!hasDayWiseItinerary && (
-            <div className="rounded-[28px] border border-black/10 bg-white p-8">
-              <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
-                Not included
-              </p>
+              <div className="rounded-[28px] border border-black/10 bg-white p-8">
+                <p className="mb-4 text-sm font-bold uppercase tracking-[0.28em] text-orange-500">
+                  Not included
+                </p>
 
-              <ul className="space-y-3 text-[#17251d]">
-                {excludes.map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1 text-red-500">–</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                <ul className="space-y-3 text-[#17251d]">
+                  {excludes.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="mt-1 text-red-500">–</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {/* WHATSAPP FORM */}
@@ -2278,18 +2230,18 @@ const displayAvailableSeats = displayBatch
               .slice(0, 3)
               .map((item: TripData) => {
                 const nextBatch = item.batches
-  ?.filter(
-    (batch) =>
-      batch.visibility === "PUBLIC" &&
-      batch.status === "OPEN" &&
-      batch.bookingEnabled &&
-      batch.totalSeats - (batch.bookedSeats || 0) > 0
-  )
-  .sort(
-    (a, b) =>
-      new Date(a.departureDate).getTime() -
-      new Date(b.departureDate).getTime()
-  )[0];
+                  ?.filter(
+                    (batch) =>
+                      batch.visibility === "PUBLIC" &&
+                      batch.status === "OPEN" &&
+                      batch.bookingEnabled &&
+                      batch.totalSeats - (batch.bookedSeats || 0) > 0
+                  )
+                  .sort(
+                    (a, b) =>
+                      new Date(a.departureDate).getTime() -
+                      new Date(b.departureDate).getTime()
+                  )[0];
 
                 return (
                   <Link
@@ -2362,10 +2314,9 @@ const displayAvailableSeats = displayBatch
 
           <a
             href={`https://wa.me/918482846287?text=${encodeURIComponent(
-              `Hi Bucketlist Adventure, I'm interested in ${trip.title}${
-                selectedBatch
-                  ? ` for ${formatDate(selectedBatch.departureDate)}`
-                  : ""
+              `Hi Bucketlist Adventure, I'm interested in ${trip.title}${selectedBatch
+                ? ` for ${formatDate(selectedBatch.departureDate)}`
+                : ""
               }. We are ${travelerCount} traveler(s). Please share the details.`
             )}`}
             target="_blank"
