@@ -19,7 +19,7 @@ type CreateBookingRequest = {
 
   couponCode?: string;
   termsAccepted: boolean;
-  
+
 
 };
 
@@ -336,84 +336,33 @@ function mapBooking(
  * ...
  */
 async function generateBookingId() {
-  const now =
-    new Date();
-
-  const yy =
-    String(
-      now.getFullYear()
-    ).slice(-2);
-
-  const mm =
-    String(
-      now.getMonth() + 1
-    ).padStart(
-      2,
-      "0"
-    );
-
-  const dd =
-    String(
-      now.getDate()
-    ).padStart(
-      2,
-      "0"
-    );
-
-  const prefix =
-    `BLA-${yy}${mm}${dd}`;
-
-  /*
-   * Read today's booking IDs
-   * directly from Supabase.
-   */
   const {
     data,
     error,
-  } = await supabaseAdmin
-    .from("bookings")
-    .select("booking_id")
-    .like(
-      "booking_id",
-      `${prefix}-%`
-    );
+  } = await supabaseAdmin.rpc(
+    "generate_next_booking_id"
+  );
 
   if (error) {
     throw error;
   }
 
-  const existingNumbers =
-    (data || [])
-      .map((booking) => {
-        const bookingId =
-          String(
-            booking.booking_id ||
-            ""
-          );
+  const bookingId =
+    typeof data === "string"
+      ? data
+      : "";
 
-        const parts =
-          bookingId.split("-");
+  if (
+    !/^BLA-[0-9]{6}-[0-9]{4}$/.test(
+      bookingId
+    )
+  ) {
+    throw new Error(
+      "Invalid booking ID returned by database."
+    );
+  }
 
-        return Number(
-          parts[
-          parts.length - 1
-          ]
-        );
-      })
-      .filter(
-        Number.isFinite
-      );
-
-  const nextNumber =
-    existingNumbers.length > 0
-      ? Math.max(
-        ...existingNumbers
-      ) + 1
-      : 1;
-
-  return `${prefix}-${String(
-    nextNumber
-  ).padStart(4, "0")}`;
+  return bookingId;
 }
 
 /*
