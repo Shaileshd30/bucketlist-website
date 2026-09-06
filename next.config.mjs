@@ -5,7 +5,7 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+  "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://cdn.razorpay.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -13,7 +13,6 @@ const contentSecurityPolicy = [
   "frame-src https://razorpay.com https://*.razorpay.com",
   "media-src 'self' data: blob: https:",
   "worker-src 'self' blob:",
-  "upgrade-insecure-requests",
 ].join("; ");
 
 const securityHeaders = [
