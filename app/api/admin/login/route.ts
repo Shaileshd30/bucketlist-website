@@ -50,7 +50,6 @@ function createSessionToken(
 
 function getClientIdentifier(
   request: Request,
-  username: string
 ) {
   const cfConnectingIp =
     request.headers
@@ -71,10 +70,10 @@ function getClientIdentifier(
 
   const forwardedIp =
     forwardedFor &&
-    forwardedFor.length > 0
+      forwardedFor.length > 0
       ? forwardedFor[
-          forwardedFor.length - 1
-        ]
+      forwardedFor.length - 1
+      ]
       : undefined;
 
   const ip =
@@ -83,7 +82,7 @@ function getClientIdentifier(
     forwardedIp ||
     "unknown";
 
-  return `${ip}:${username.toLowerCase()}`;
+  return ip;
 }
 
 function createClientKey(
@@ -103,7 +102,7 @@ function minutesFromNow(
 ) {
   return new Date(
     Date.now() +
-      minutes * 60 * 1000
+    minutes * 60 * 1000
   );
 }
 
@@ -172,94 +171,64 @@ async function clearLoginAttempt(
 }
 
 async function recordFailedAttempt(
-  clientKey: string,
-  current:
-    | LoginAttemptRow
-    | null
+  clientKey: string
 ) {
-  const now =
-    new Date();
-
-  const windowStart =
-    current
-      ? new Date(
-          current.window_started_at
-        )
-      : now;
-
-  const windowAgeMs =
-    now.getTime() -
-    windowStart.getTime();
-
-  const windowExpired =
-    !Number.isFinite(
-      windowAgeMs
-    ) ||
-    windowAgeMs >
-      WINDOW_MINUTES *
-        60 *
-        1000;
-
-  const failedAttempts =
-    windowExpired
-      ? 1
-      : (
-          current?.failed_attempts ||
-          0
-        ) + 1;
-
-  const nextWindowStart =
-    windowExpired
-      ? now
-      : windowStart;
-
-  const shouldBlock =
-    failedAttempts >=
-    MAX_FAILED_ATTEMPTS;
-
-  const blockedUntil =
-    shouldBlock
-      ? minutesFromNow(
-          BLOCK_MINUTES
-        )
-      : null;
-
   const {
+    data,
     error,
-  } = await supabaseAdmin
-    .from("admin_login_attempts")
-    .upsert(
-      {
-        client_key:
-          clientKey,
+  } = await supabaseAdmin.rpc(
+    "record_admin_login_failure",
+    {
+      p_client_key:
+        clientKey,
 
-        failed_attempts:
-          failedAttempts,
+      p_max_attempts:
+        MAX_FAILED_ATTEMPTS,
 
-        window_started_at:
-          nextWindowStart.toISOString(),
+      p_window_minutes:
+        WINDOW_MINUTES,
 
-        blocked_until:
-          blockedUntil
-            ? blockedUntil.toISOString()
-            : null,
-
-        updated_at:
-          now.toISOString(),
-      },
-      {
-        onConflict:
-          "client_key",
-      }
-    );
+      p_block_minutes:
+        BLOCK_MINUTES,
+    }
+  );
 
   if (error) {
     throw error;
   }
 
+  const rows =
+    data as
+      | Array<{
+          failed_attempts:
+            number;
+
+          blocked_until:
+            string | null;
+        }>
+      | null;
+
+  const result =
+    rows?.[0];
+
+  if (!result) {
+    throw new Error(
+      "Rate-limit update returned no result."
+    );
+  }
+
   return {
-    failedAttempts,
-    blockedUntil,
+    failedAttempts:
+      Number(
+        result.failed_attempts
+      ),
+
+    blockedUntil:
+      result.blocked_until
+        ? new Date(
+            result.blocked_until
+          )
+        : null,
   };
 }
 
@@ -298,60 +267,59 @@ export async function POST(
 
     let body: LoginRequest;
 
-try {
-  const parsedBody: unknown =
-    await request.json();
+    try {
+      const parsedBody: unknown =
+        await request.json();
 
-  if (
-    parsedBody === null ||
-    typeof parsedBody !== "object" ||
-    Array.isArray(parsedBody)
-  ) {
-    return Response.json(
-      {
-        error:
-          "Invalid JSON request body.",
-      },
-      {
-        status: 400,
+      if (
+        parsedBody === null ||
+        typeof parsedBody !== "object" ||
+        Array.isArray(parsedBody)
+      ) {
+        return Response.json(
+          {
+            error:
+              "Invalid JSON request body.",
+          },
+          {
+            status: 400,
 
-        headers: {
-          "Cache-Control":
-            "no-store",
-        },
+            headers: {
+              "Cache-Control":
+                "no-store",
+            },
+          }
+        );
       }
-    );
-  }
 
-  body =
-    parsedBody as LoginRequest;
-} catch {
-  return Response.json(
-    {
-      error:
-        "Invalid JSON request body.",
-    },
-    {
-      status: 400,
+      body =
+        parsedBody as LoginRequest;
+    } catch {
+      return Response.json(
+        {
+          error:
+            "Invalid JSON request body.",
+        },
+        {
+          status: 400,
 
-      headers: {
-        "Cache-Control":
-          "no-store",
-      },
+          headers: {
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
     }
-  );
-}
 
-const username =
-  body.username?.trim() || "";
+    const username =
+      body.username?.trim() || "";
 
-const password =
-  body.password || "";
+    const password =
+      body.password || "";
 
     const identifier =
       getClientIdentifier(
         request,
-        username
       );
 
     const clientKey =
@@ -374,6 +342,20 @@ const password =
         "Unable to read admin login rate limit state:",
         error
       );
+
+      return Response.json(
+        {
+          error:
+            "Login is temporarily unavailable. Please try again later.",
+        },
+        {
+          status: 503,
+          headers: {
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
     }
 
     if (
@@ -389,7 +371,7 @@ const password =
           blockedUntil.getTime()
         ) &&
         blockedUntil >
-          new Date()
+        new Date()
       ) {
         const retryAfter =
           secondsUntil(
@@ -438,7 +420,6 @@ const password =
         const result =
           await recordFailedAttempt(
             clientKey,
-            loginAttempt
           );
 
         if (
