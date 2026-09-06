@@ -19,6 +19,7 @@ type CreateBookingRequest = {
 
   couponCode?: string;
   termsAccepted: boolean;
+  
 
 };
 
@@ -1208,11 +1209,11 @@ export async function POST(
 
       booking_status:
         "PENDING",
-        terms_accepted_at:
-  now,
+      terms_accepted_at:
+        now,
 
-terms_version:
-  CURRENT_TERMS_VERSION,
+      terms_version:
+        CURRENT_TERMS_VERSION,
 
       created_at:
         now,
