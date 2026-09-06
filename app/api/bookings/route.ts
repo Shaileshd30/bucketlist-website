@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/admin-auth";
 
 import type { Booking } from "@/app/data/bookings";
+import { readLimitedJsonObject } from "@/lib/request-json";
 
 export const dynamic = "force-dynamic";
 const CURRENT_TERMS_VERSION = "2026-09-05";
@@ -443,41 +444,25 @@ export async function POST(
   request: Request
 ) {
   try {
-    let body: CreateBookingRequest;
+        const bodyResult =
+      await readLimitedJsonObject(
+        request,
+        16 * 1024
+      );
 
-    try {
-      const parsedBody: unknown =
-        await request.json();
-
-      if (
-        parsedBody === null ||
-        typeof parsedBody !== "object" ||
-        Array.isArray(parsedBody)
-      ) {
-        return Response.json(
-          {
-            error:
-              "Invalid JSON request body.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
-
-      body =
-        parsedBody as CreateBookingRequest;
-    } catch {
+    if (!bodyResult.ok) {
       return Response.json(
         {
-          error:
-            "Invalid JSON request body.",
+          error: bodyResult.error,
         },
         {
-          status: 400,
+          status: bodyResult.status,
         }
       );
     }
+
+    const body =
+      bodyResult.value as unknown as CreateBookingRequest;
 
     /*
      * -----------------------------------------------------

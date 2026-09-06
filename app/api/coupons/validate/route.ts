@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { readLimitedJsonObject } from "@/lib/request-json";
 
 type ValidateCouponRequest = {
   code?: string;
@@ -108,53 +109,28 @@ export async function POST(
   request: Request
 ) {
   try {
-    let body: ValidateCouponRequest;
+        const bodyResult =
+      await readLimitedJsonObject(
+        request,
+        4 * 1024
+      );
 
-try {
-  const parsedBody: unknown =
-    await request.json();
-
-  if (
-    parsedBody === null ||
-    typeof parsedBody !== "object" ||
-    Array.isArray(parsedBody)
-  ) {
-    return Response.json(
-      {
-        valid: false,
-
-        message:
-          "Invalid JSON request body.",
-
-        discountAmount: 0,
-
-        finalAmount: 0,
-      } satisfies CouponValidationResult,
-      {
-        status: 400,
-      }
-    );
-  }
-
-  body =
-    parsedBody as ValidateCouponRequest;
-} catch {
-  return Response.json(
-    {
-      valid: false,
-
-      message:
-        "Invalid JSON request body.",
-
-      discountAmount: 0,
-
-      finalAmount: 0,
-    } satisfies CouponValidationResult,
-    {
-      status: 400,
+    if (!bodyResult.ok) {
+      return Response.json(
+        {
+          valid: false,
+          message: bodyResult.error,
+          discountAmount: 0,
+          finalAmount: 0,
+        } satisfies CouponValidationResult,
+        {
+          status: bodyResult.status,
+        }
+      );
     }
-  );
-}
+
+    const body =
+      bodyResult.value as unknown as ValidateCouponRequest;
 
     const code =
       normalizeCode(

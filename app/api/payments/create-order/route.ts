@@ -1,6 +1,7 @@
 import Razorpay from "razorpay";
 
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { readLimitedJsonObject } from "@/lib/request-json";
 
 export const dynamic = "force-dynamic";
 
@@ -73,41 +74,25 @@ export async function POST(
   request: Request
 ) {
   try {
-    let body: CreatePaymentOrderRequest;
+        const bodyResult =
+      await readLimitedJsonObject(
+        request,
+        2 * 1024
+      );
 
-try {
-  const parsedBody: unknown =
-    await request.json();
-
-  if (
-    parsedBody === null ||
-    typeof parsedBody !== "object" ||
-    Array.isArray(parsedBody)
-  ) {
-    return Response.json(
-      {
-        error:
-          "Invalid JSON request body.",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
-
-  body =
-    parsedBody as CreatePaymentOrderRequest;
-} catch {
-  return Response.json(
-    {
-      error:
-        "Invalid JSON request body.",
-    },
-    {
-      status: 400,
+    if (!bodyResult.ok) {
+      return Response.json(
+        {
+          error: bodyResult.error,
+        },
+        {
+          status: bodyResult.status,
+        }
+      );
     }
-  );
-}
+
+    const body =
+      bodyResult.value as unknown as CreatePaymentOrderRequest;
 
     const bookingId =
       body.bookingId?.trim();
