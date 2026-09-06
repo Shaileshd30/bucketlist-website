@@ -2,6 +2,10 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 
 import { supabaseAdmin } from "@/lib/supabase-server";
+import {
+  ADMIN_SESSION_MAX_AGE_SECONDS,
+  createAdminSessionToken,
+} from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -34,18 +38,6 @@ function safeCompare(a: string, b: string) {
     aBuffer,
     bBuffer
   );
-}
-
-function createSessionToken(
-  username: string,
-  secret: string
-) {
-  return crypto
-    .createHmac("sha256", secret)
-    .update(
-      `bucketlist-admin-session:${username}`
-    )
-    .digest("hex");
 }
 
 function getClientIdentifier(
@@ -199,14 +191,14 @@ async function recordFailedAttempt(
 
   const rows =
     data as
-      | Array<{
-          failed_attempts:
-            number;
+    | Array<{
+      failed_attempts:
+      number;
 
-          blocked_until:
-            string | null;
-        }>
-      | null;
+      blocked_until:
+      string | null;
+    }>
+    | null;
 
   const result =
     rows?.[0];
@@ -226,8 +218,8 @@ async function recordFailedAttempt(
     blockedUntil:
       result.blocked_until
         ? new Date(
-            result.blocked_until
-          )
+          result.blocked_until
+        )
         : null,
   };
 }
@@ -484,10 +476,16 @@ export async function POST(
       );
     }
 
+    const expiresAtMs =
+      Date.now() +
+      ADMIN_SESSION_MAX_AGE_SECONDS *
+      1000;
+
     const sessionToken =
-      createSessionToken(
+      createAdminSessionToken(
         adminUsername,
-        sessionSecret
+        sessionSecret,
+        expiresAtMs
       );
 
     const cookieStore =
@@ -508,7 +506,7 @@ export async function POST(
         path: "/",
 
         maxAge:
-          60 * 60 * 8,
+          ADMIN_SESSION_MAX_AGE_SECONDS,
       }
     );
 

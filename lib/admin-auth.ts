@@ -4,16 +4,55 @@ import { cookies } from "next/headers";
 const SESSION_COOKIE_NAME =
   "bla_admin_session";
 
-function createSessionToken(
+export const ADMIN_SESSION_MAX_AGE_SECONDS =
+  60 * 60 * 8;
+
+export function createAdminSessionToken(
   username: string,
-  secret: string
+  secret: string,
+  expiresAtMs: number
 ) {
-  return crypto
-    .createHmac("sha256", secret)
-    .update(
-      `bucketlist-admin-session:${username}`
-    )
-    .digest("hex");
+  const signature =
+    crypto
+      .createHmac(
+        "sha256",
+        secret
+      )
+      .update(
+        `bucketlist-admin-session:${username}:${expiresAtMs}`
+      )
+      .digest("hex");
+
+  return `${expiresAtMs}.${signature}`;
+}
+
+function safeCompare(
+  expected: string,
+  received: string
+) {
+  const expectedBuffer =
+    Buffer.from(
+      expected,
+      "utf8"
+    );
+
+  const receivedBuffer =
+    Buffer.from(
+      received,
+      "utf8"
+    );
+
+  if (
+    expectedBuffer.length !==
+    receivedBuffer.length
+  ) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    expectedBuffer,
+    receivedBuffer
+  );
 }
 
 export async function isAdminAuthenticated() {
@@ -33,43 +72,58 @@ export async function isAdminAuthenticated() {
   const cookieStore =
     await cookies();
 
-  const sessionCookie =
+  const token =
     cookieStore.get(
       SESSION_COOKIE_NAME
-    );
+    )?.value;
 
-  if (!sessionCookie?.value) {
+  if (!token) {
     return false;
   }
 
-  const expectedToken =
-    createSessionToken(
-      adminUsername,
-      sessionSecret
-    );
+  const parts =
+    token.split(".");
 
-  const expectedBuffer =
-    Buffer.from(
-      expectedToken,
-      "utf8"
-    );
+  if (parts.length !== 2) {
+    return false;
+  }
 
-  const receivedBuffer =
-    Buffer.from(
-      sessionCookie.value,
-      "utf8"
-    );
+  const expiresAtText =
+    parts[0];
 
   if (
-    expectedBuffer.length !==
-    receivedBuffer.length
+    !/^[0-9]+$/.test(
+      expiresAtText
+    )
   ) {
     return false;
   }
 
-  return crypto.timingSafeEqual(
-    expectedBuffer,
-    receivedBuffer
+  const expiresAtMs =
+    Number(
+      expiresAtText
+    );
+
+  if (
+    !Number.isSafeInteger(
+      expiresAtMs
+    ) ||
+    expiresAtMs <=
+      Date.now()
+  ) {
+    return false;
+  }
+
+  const expectedToken =
+    createAdminSessionToken(
+      adminUsername,
+      sessionSecret,
+      expiresAtMs
+    );
+
+  return safeCompare(
+    expectedToken,
+    token
   );
 }
 
@@ -85,6 +139,10 @@ export async function requireAdmin() {
       },
       {
         status: 401,
+        headers: {
+          "Cache-Control":
+            "no-store",
+        },
       }
     );
   }
