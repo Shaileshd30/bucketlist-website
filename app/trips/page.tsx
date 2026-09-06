@@ -1,3 +1,5 @@
+import { serializeJsonLd } from "@/lib/json-ld";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -737,9 +739,7 @@ export default async function TripsPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html:
-            JSON.stringify(
-              structuredData
-            ),
+            serializeJsonLd(structuredData),
         }}
       />
 

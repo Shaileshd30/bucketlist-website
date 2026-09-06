@@ -1,3 +1,5 @@
+import { serializeJsonLd } from "@/lib/json-ld";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -112,7 +114,7 @@ export default function AboutPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structuredData),
+          __html: serializeJsonLd(structuredData),
         }}
       />
 

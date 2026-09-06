@@ -1,3 +1,5 @@
+import { serializeJsonLd } from "@/lib/json-ld";
+
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -876,9 +878,7 @@ export default async function TripPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html:
-            JSON.stringify(
-              structuredData
-            ),
+            serializeJsonLd(structuredData),
         }}
       />
 
