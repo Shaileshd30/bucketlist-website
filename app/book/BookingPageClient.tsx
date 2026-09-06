@@ -498,7 +498,6 @@ export default function BookingPageClient() {
       });
 
       razorpay.open();
-      setIsProcessingPayment(false);
     } catch (error) {
       setIsProcessingPayment(false);
       setPaymentError(
