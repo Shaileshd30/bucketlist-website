@@ -1,6 +1,28 @@
 ﻿/** @type {import('next').NextConfig} */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://razorpay.com https://*.razorpay.com",
+  "frame-src https://razorpay.com https://*.razorpay.com",
+  "media-src 'self' data: blob: https:",
+  "worker-src 'self' blob:",
+  "upgrade-insecure-requests",
+].join("; ");
 
 const securityHeaders = [
+  {
+    key:
+      "Content-Security-Policy-Report-Only",
+    value:
+      contentSecurityPolicy,
+  },
   {
     key: "Strict-Transport-Security",
     value: "max-age=31536000; includeSubDomains",
