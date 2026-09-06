@@ -18,7 +18,7 @@ const contentSecurityPolicy = [
 const securityHeaders = [
   {
     key:
-      "Content-Security-Policy-Report-Only",
+      "Content-Security-Policy",
     value:
       contentSecurityPolicy,
   },
