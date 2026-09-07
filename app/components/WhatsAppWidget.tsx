@@ -42,7 +42,7 @@ export default function WhatsAppWidget() {
         type="button"
         onClick={() => setIsOpen((current) => !current)}
         aria-label={isOpen ? "Close WhatsApp chat" : "Open WhatsApp chat"}
-        className={`fixed bottom-6 right-5 z-[80] flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_35px_rgba(0,0,0,0.28)] transition duration-300 hover:scale-105 sm:bottom-7 sm:right-7 ${
+                className={`fixed bottom-5 right-4 z-[80] flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_35px_rgba(0,0,0,0.28)] transition duration-300 hover:scale-105 sm:bottom-7 sm:right-7 sm:h-14 sm:w-14 ${
           isTripDetailPage ? "hidden md:flex" : ""
         }`}
       >

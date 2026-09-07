@@ -7,7 +7,7 @@ const contact = {
   designation: "Director – Strategy & Business Development",
   phoneDisplay: "+91 84828 46287",
   phone: "+918482846287",
-  email: "bucketlistdestinations2@gmail.com",
+  email: "shailesh@bucketlistadventure.in",
   website: "https://bucketlistadventure.in/",
   address: "The Office Club, Runwal Platinum, Bavdhan, Pune, Maharashtra, India 411021",
 };
@@ -88,22 +88,23 @@ export default function ShaileshDigitalCard() {
       <article className="digitalCard">
         <section className="hero">
           <Image
-            className="portrait"
-            src="/images/team/shailesh.jpg"
-            alt="Shailesh Deshmukh"
-            fill
-            priority
-            sizes="(max-width: 720px) 100vw, 520px"
-          />
-          <div className="heroShade" />
-          <Image
             className="brandLogo"
             src="/bucketlist-logo.png"
             alt="Bucketlist Adventure"
-            width={176}
-            height={100}
+            width={320}
+            height={182}
             priority
           />
+          <div className="avatarRing">
+            <Image
+              className="avatar"
+              src="/images/team/shailesh.jpg"
+              alt="Shailesh Deshmukh"
+              fill
+              priority
+              sizes="92px"
+            />
+          </div>
           <div className="identity">
             <p>{contact.designation}</p>
             <h1>{contact.name}</h1>
@@ -165,13 +166,14 @@ export default function ShaileshDigitalCard() {
         :global(button), :global(a) { font: inherit; }
         .pageShell { min-height: 100svh; padding: 28px 14px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         .digitalCard { width: min(100%, 520px); margin: 0 auto; overflow: hidden; border-radius: 34px; background: #fffdf8; box-shadow: 0 28px 80px rgba(23,37,29,.18); }
-        .hero { position: relative; height: 510px; background: #17251d; overflow: hidden; }
-        .portrait { object-fit: cover; object-position: center 28%; }
-        .heroShade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(3,11,7,.08) 10%, rgba(3,11,7,.05) 45%, rgba(3,11,7,.94) 100%); }
-        .brandLogo { position: absolute; top: 24px; left: 24px; width: 142px; height: auto; object-fit: contain; filter: drop-shadow(0 6px 20px rgba(0,0,0,.18)); }
+        .hero { position: relative; height: 510px; background: radial-gradient(circle at 72% 15%, #31513f 0, #17251d 46%, #0c1711 100%); overflow: hidden; }
+        .hero::after { content: ""; position: absolute; width: 340px; height: 340px; right: -150px; top: -120px; border: 1px solid rgba(242,140,40,.22); border-radius: 50%; box-shadow: 0 0 0 55px rgba(242,140,40,.035), 0 0 0 110px rgba(242,140,40,.025); }
+        .brandLogo { position: absolute; top: 70px; left: 50%; width: min(66%, 310px); height: auto; object-fit: contain; transform: translateX(-50%); filter: drop-shadow(0 12px 28px rgba(0,0,0,.22)); }
+        .avatarRing { position: absolute; right: 28px; bottom: 28px; z-index: 2; width: 92px; height: 92px; overflow: hidden; border: 4px solid #f28c28; border-radius: 50%; background: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.32); }
+        .avatar { object-fit: cover; object-position: center 25%; }
         .identity { position: absolute; left: 28px; right: 28px; bottom: 28px; color: white; }
         .identity p { margin: 0 0 8px; color: #ffb36a; font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-        .identity h1 { margin: 0; font-size: clamp(35px, 9vw, 48px); line-height: .98; letter-spacing: -.04em; }
+        .identity h1 { max-width: calc(100% - 108px); margin: 0; font-size: clamp(35px, 9vw, 48px); line-height: .98; letter-spacing: -.04em; }
         .identity span { display: block; margin-top: 13px; color: rgba(255,255,255,.82); font-size: 15px; }
         .content { padding: 0 24px 28px; }
         .actionGrid { position: relative; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: -1px; padding: 18px 0; border-bottom: 1px solid #e7e0d5; }
