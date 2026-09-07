@@ -73,10 +73,70 @@ const services = [
   "Customized Tours",
 ];
 
-function Action({ href, icon, label }: { href: string; icon: string; label: string }) {
+type ActionIconName =
+  | "phone"
+  | "whatsapp"
+  | "email"
+  | "website";
+
+function ActionIcon({
+  name,
+}: {
+  name: ActionIconName;
+}) {
+  if (name === "phone") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.28-1.28a2 2 0 0 1 2.11-.45c.9.33 1.84.56 2.8.69A2 2 0 0 1 22 16.92Z" />
+      </svg>
+    );
+  }
+
+  if (name === "whatsapp") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.38 8.38 0 0 1 12.5 3h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+        <path d="M9 8.5c.7 2.5 2 3.8 4.5 4.5" />
+      </svg>
+    );
+  }
+
+  if (name === "email") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </svg>
+    );
+  }
+
   return (
-    <a className="quickAction" href={href} target="_blank" rel="noreferrer">
-      <span aria-hidden="true">{icon}</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+    </svg>
+  );
+}
+
+function Action({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: ActionIconName;
+  label: string;
+}) {
+  return (
+    <a
+      className="quickAction"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <span aria-hidden="true">
+        <ActionIcon name={icon} />
+      </span>
       <small>{label}</small>
     </a>
   );
@@ -102,7 +162,7 @@ export default function ShaileshDigitalCard() {
               alt="Shailesh Deshmukh"
               fill
               priority
-              sizes="92px"
+              sizes="120px"
             />
           </div>
           <div className="identity">
@@ -114,10 +174,10 @@ export default function ShaileshDigitalCard() {
 
         <section className="content">
           <div className="actionGrid" aria-label="Contact actions">
-            <Action href={`tel:${contact.phone}`} icon="☎" label="Call" />
-            <Action href={links.whatsapp} icon="◉" label="WhatsApp" />
-            <Action href={`mailto:${contact.email}`} icon="✉" label="Email" />
-            <Action href={contact.website} icon="↗" label="Website" />
+            <Action href={`tel:${contact.phone}`} icon="phone" label="Call" />
+            <Action href={links.whatsapp} icon="whatsapp" label="WhatsApp" />
+            <Action href={`mailto:${contact.email}`} icon="email" label="Email" />
+            <Action href={contact.website} icon="website" label="Website" />
           </div>
 
           <div className="primaryActions">
@@ -161,24 +221,26 @@ export default function ShaileshDigitalCard() {
       </article>
 
       <style jsx>{`
-        :global(*) { box-sizing: border-box; }
-        :global(body) { margin: 0; background: #eee9df; color: #17251d; }
-        :global(button), :global(a) { font: inherit; }
+        :global(.quickAction) { display: grid; justify-items: center; gap: 9px; color: #17251d; text-decoration: none; }
+        :global(.quickAction > span) { display: grid; width: 49px; height: 49px; place-items: center; border-radius: 50%; background: #f28c28; color: white; box-shadow: 0 8px 18px rgba(242,140,40,.26); }
+        :global(.quickAction svg) { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+        :global(.quickAction small) { font-size: 11px; font-weight: 750; }
         .pageShell { min-height: 100svh; padding: 28px 14px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         .digitalCard { width: min(100%, 520px); margin: 0 auto; overflow: hidden; border-radius: 34px; background: #fffdf8; box-shadow: 0 28px 80px rgba(23,37,29,.18); }
         .hero { position: relative; height: 510px; background: radial-gradient(circle at 72% 15%, #31513f 0, #17251d 46%, #0c1711 100%); overflow: hidden; }
         .hero::after { content: ""; position: absolute; width: 340px; height: 340px; right: -150px; top: -120px; border: 1px solid rgba(242,140,40,.22); border-radius: 50%; box-shadow: 0 0 0 55px rgba(242,140,40,.035), 0 0 0 110px rgba(242,140,40,.025); }
         .brandLogo { position: absolute; top: 70px; left: 50%; width: min(66%, 310px); height: auto; object-fit: contain; transform: translateX(-50%); filter: drop-shadow(0 12px 28px rgba(0,0,0,.22)); }
-        .avatarRing { position: absolute; right: 28px; bottom: 28px; z-index: 2; width: 92px; height: 92px; overflow: hidden; border: 4px solid #f28c28; border-radius: 50%; background: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.32); }
+        .avatarRing { position: absolute; right: 24px; bottom: 24px; z-index: 2; width: 120px; height: 120px; overflow: hidden; border: 4px solid #f28c28; border-radius: 50%; background: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.32); }
         .avatar { object-fit: cover; object-position: center 25%; }
-        .identity { position: absolute; left: 28px; right: 28px; bottom: 28px; color: white; }
+        .identity { position: absolute; left: 28px; right: 28px; bottom: 28px; z-index: 2; color: white; }
         .identity p { margin: 0 0 8px; color: #ffb36a; font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-        .identity h1 { max-width: calc(100% - 108px); margin: 0; font-size: clamp(35px, 9vw, 48px); line-height: .98; letter-spacing: -.04em; }
+        .identity h1 { max-width: calc(100% - 140px); margin: 0; font-size: clamp(32px, 8vw, 42px); line-height: 1; letter-spacing: -.04em; }
         .identity span { display: block; margin-top: 13px; color: rgba(255,255,255,.82); font-size: 15px; }
         .content { padding: 0 24px 28px; }
         .actionGrid { position: relative; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: -1px; padding: 18px 0; border-bottom: 1px solid #e7e0d5; }
-        .quickAction { display: grid; justify-items: center; gap: 7px; color: #17251d; text-decoration: none; }
-        .quickAction > span { display: grid; width: 49px; height: 49px; place-items: center; border-radius: 50%; background: #f28c28; color: white; font-size: 20px; font-weight: 800; box-shadow: 0 8px 18px rgba(242,140,40,.26); }
+        .quickAction { display: grid; justify-items: center; gap: 9px; color: #17251d; text-decoration: none; }
+        .quickAction > span { display: grid; width: 49px; height: 49px; place-items: center; border-radius: 50%; background: #f28c28; color: white; box-shadow: 0 8px 18px rgba(242,140,40,.26); }
+        .quickAction svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
         .quickAction small { font-size: 11px; font-weight: 750; }
         .primaryActions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px 0 8px; }
         .primaryActions button { min-height: 50px; border: 0; border-radius: 15px; background: #17251d; color: white; font-weight: 800; cursor: pointer; }
