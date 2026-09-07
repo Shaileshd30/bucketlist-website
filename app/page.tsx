@@ -422,8 +422,7 @@ export default function Home() {
   {!heroVideoFailed && (
     <video
       ref={heroVideoRef}
-      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-        heroVideoReady ? "opacity-100" : "opacity-0"
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${heroVideoReady ? "opacity-100" : "opacity-0"
       }`}
       style={{
         position: "absolute",
@@ -542,8 +541,7 @@ export default function Home() {
 
   {/* Premium mobile navigation */}
   <div
-    className={`fixed inset-0 z-[70] transition lg:hidden ${
-      mobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
+          className={`fixed inset-0 z-[70] transition lg:hidden ${mobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
     }`}
     aria-hidden={!mobileMenuOpen}
   >
@@ -551,14 +549,12 @@ export default function Home() {
       type="button"
       aria-label="Close navigation menu"
       onClick={() => setMobileMenuOpen(false)}
-      className={`absolute inset-0 bg-[#07120d]/70 backdrop-blur-sm transition-opacity duration-300 ${
-        mobileMenuOpen ? "opacity-100" : "opacity-0"
+            className={`absolute inset-0 bg-[#07120d]/70 backdrop-blur-sm transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0"
       }`}
     />
 
     <div
-      className={`absolute inset-x-3 top-3 overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1510]/98 text-white shadow-[0_30px_100px_rgba(0,0,0,0.45)] transition duration-300 ${
-        mobileMenuOpen
+            className={`absolute inset-x-3 top-3 overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1510]/98 text-white shadow-[0_30px_100px_rgba(0,0,0,0.45)] transition duration-300 ${mobileMenuOpen
           ? "translate-y-0 opacity-100"
           : "-translate-y-5 opacity-0"
       }`}
@@ -958,13 +954,13 @@ export default function Home() {
         <div className="grid gap-8 overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.06)] lg:grid-cols-[1.1fr_0.9fr]">
           <div className="relative min-h-[260px] overflow-hidden bg-[#e8e4dc] sm:min-h-[340px]">
             {featuredTrip.image && (
-              <img
+              <Image
                 src={featuredTrip.image}
                 alt={featuredTrip.title}
-                loading="lazy"
-                decoding="async"
-                fetchPriority="low"
-                className="absolute inset-0 h-full w-full object-cover object-center"
+                fill
+                sizes="(min-width: 1024px) 60vw, 100vw"
+                unoptimized
+                className="object-cover object-center"
               />
             )}
           </div>
@@ -1070,15 +1066,13 @@ export default function Home() {
               href="/treks-near-pune"
               className="group relative min-h-[400px] overflow-hidden rounded-[32px] bg-[#17251d] shadow-[0_28px_80px_rgba(0,0,0,0.12)] sm:min-h-[500px]"
             >
-              <img
+              <Image
                 src="/images/home/rajgad-sahyadri.webp"
                 alt=""
                 aria-hidden="true"
-                loading="lazy"
-                decoding="async"
-                fetchPriority="low"
-                className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover object-center"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-[#07150f]/90 via-[#07150f]/20 to-transparent" />
@@ -1177,13 +1171,14 @@ export default function Home() {
                 maskPosition: "center",
               }}
             >
-              <img
+              <Image
                 src={scene.image}
                 alt=""
                 aria-hidden="true"
-                loading="lazy"
-                decoding="async"
-                className="scrollcraft-media absolute inset-0 h-full w-full object-cover"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                unoptimized
+                className="scrollcraft-media object-cover"
                 style={{ objectPosition: scene.position }}
               />
             </div>
@@ -1377,8 +1372,7 @@ export default function Home() {
     const displayDuration =
       trip.duration ||
       (trip.durationDays
-        ? `${trip.durationDays} ${
-            trip.durationDays === 1
+                  ? `${trip.durationDays} ${trip.durationDays === 1
               ? "Day"
               : "Days"
           }`
@@ -1392,13 +1386,13 @@ export default function Home() {
         {/* IMAGE */}
         <div className="relative min-h-[420px] overflow-hidden lg:min-h-[520px]">
           {trip.image && (
-            <img
+                      <Image
               src={trip.image}
               alt={trip.title}
-              loading="lazy"
-              decoding="async"
-              fetchPriority="low"
-              className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-105"
+                        fill
+                        sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        unoptimized
+                        className="object-cover object-center transition duration-700 group-hover:scale-105"
             />
           )}
 
@@ -1476,8 +1470,7 @@ export default function Home() {
               <p className="mt-2 text-lg font-bold text-[#17251d]">
                 {availableSeats !== null
                   ? availableSeats > 0
-                    ? `${availableSeats} ${
-                        availableSeats === 1
+                              ? `${availableSeats} ${availableSeats === 1
                           ? "seat"
                           : "seats"
                       } left`
@@ -1547,8 +1540,7 @@ export default function Home() {
       const displayDuration =
         trip.duration ||
         (trip.durationDays
-          ? `${trip.durationDays} ${
-              trip.durationDays === 1
+                    ? `${trip.durationDays} ${trip.durationDays === 1
                 ? "Day"
                 : "Days"
             }`
@@ -1562,13 +1554,13 @@ export default function Home() {
         >
           <div className="relative h-64 overflow-hidden sm:h-72">
             {trip.image && (
-              <img
+                        <Image
                 src={trip.image}
                 alt={trip.title}
-                loading="lazy"
-                decoding="async"
-                fetchPriority="low"
-                className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-105"
+                          fill
+                          sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                          unoptimized
+                          className="object-cover object-center transition duration-700 group-hover:scale-105"
               />
             )}
 
@@ -2187,15 +2179,13 @@ export default function Home() {
         href="/trips"
         className="group relative min-h-[520px] overflow-hidden rounded-[32px] border border-white/10 lg:col-span-7 lg:min-h-[650px]"
       >
-        <img
+              <Image
           src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=88"
           alt=""
           aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                fill
+                sizes="(min-width: 1024px) 58vw, 100vw"
+                className="object-cover object-center transition duration-700 group-hover:scale-105"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-black/10" />
@@ -2238,15 +2228,13 @@ export default function Home() {
           href="/trips"
           className="group relative min-h-[310px] overflow-hidden rounded-[32px] border border-white/10"
         >
-          <img
+                <Image
             src="https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=88"
             alt=""
             aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            fetchPriority="low"
-            className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                  fill
+                  sizes="(min-width: 1024px) 42vw, 100vw"
+                  className="object-cover object-center transition duration-700 group-hover:scale-105"
           />
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />
@@ -2280,15 +2268,13 @@ export default function Home() {
           href="/trips"
           className="group relative min-h-[310px] overflow-hidden rounded-[32px] border border-white/10"
         >
-          <img
+                <Image
             src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=88"
             alt=""
             aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            fetchPriority="low"
-            className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                  fill
+                  sizes="(min-width: 1024px) 42vw, 100vw"
+                  className="object-cover object-center transition duration-700 group-hover:scale-105"
           />
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -2328,15 +2314,13 @@ export default function Home() {
         href="/trips"
         className="group relative min-h-[390px] overflow-hidden rounded-[30px] border border-white/10"
       >
-        <img
+              <Image
           src="https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1000&q=88"
           alt=""
           aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                fill
+                sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                className="object-cover object-center transition duration-700 group-hover:scale-105"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />
@@ -2370,15 +2354,13 @@ export default function Home() {
         rel="noopener noreferrer"
         className="group relative min-h-[390px] overflow-hidden rounded-[30px] border border-white/10"
       >
-        <img
+              <Image
           src="https://images.unsplash.com/photo-1504150558240-0b4fd8946624?auto=format&fit=crop&w=1000&q=88"
           alt=""
           aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                fill
+                sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                className="object-cover object-center transition duration-700 group-hover:scale-105"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -2410,15 +2392,13 @@ export default function Home() {
         href="#contact"
         className="group relative min-h-[390px] overflow-hidden rounded-[30px] border border-white/10 md:col-span-2 xl:col-span-1"
       >
-        <img
+              <Image
           src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1000&q=88"
           alt=""
           aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          className="absolute inset-0 object-cover object-center transition duration-700 group-hover:scale-105"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+                fill
+                sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                className="object-cover object-center transition duration-700 group-hover:scale-105"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />

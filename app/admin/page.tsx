@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-
 import CouponManager from "./components/CouponManager";
 import { useEffect, useState } from "react";
 import {
@@ -256,8 +256,7 @@ const deleteBatch = (batchId: string) => {
   }
 
   const confirmed = window.confirm(
-    `Delete departure ${
-      batch.departureDate || "without a date"
+      `Delete departure ${batch.departureDate || "without a date"
     } from ${trip.title}?`
   );
 
@@ -525,8 +524,7 @@ const deleteBatch = (batchId: string) => {
                 if (isDayWiseItineraryItem(entry)) {
                   return {
                     time: "",
-                    activity: `Day ${entry.day || index + 1}: ${entry.title}${
-                      entry.description ? ` — ${entry.description}` : ""
+                  activity: `Day ${entry.day || index + 1}: ${entry.title}${entry.description ? ` — ${entry.description}` : ""
                     }`,
                   };
                 }
@@ -1090,8 +1088,7 @@ const deleteBatch = (batchId: string) => {
 
           <div className="flex flex-wrap items-center gap-3">
             <span
-              className={`inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${
-                siteSynced ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+              className={`inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${siteSynced ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
               }`}
             >
               {siteSynced ? "Site synced" : "Unsaved changes"}
@@ -1164,8 +1161,7 @@ const deleteBatch = (batchId: string) => {
           <button
             type="button"
             onClick={() => setAdminSection("TRIPS")}
-            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
-              adminSection === "TRIPS"
+            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${adminSection === "TRIPS"
                 ? "bg-[#17251d] text-white"
                 : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
             }`}
@@ -1176,8 +1172,7 @@ const deleteBatch = (batchId: string) => {
           <button
             type="button"
             onClick={() => setAdminSection("COUPONS")}
-            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
-              adminSection === "COUPONS"
+            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${adminSection === "COUPONS"
                 ? "bg-[#17251d] text-white"
                 : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
             }`}
@@ -1914,11 +1909,14 @@ const deleteBatch = (batchId: string) => {
                             <p className="text-sm font-medium text-[#17251d]">Day image</p>
 
                             {dayItem.image ? (
-                              <div className="overflow-hidden rounded-2xl border border-black/10">
-                                <img
+                                <div className="relative h-52 overflow-hidden rounded-2xl border border-black/10">
+                                  <Image
                                   src={dayItem.image}
                                   alt={`Day ${dayItem.day} itinerary`}
-                                  className="h-52 w-full object-cover"
+                                    fill
+                                    sizes="(min-width: 768px) 50vw, 100vw"
+                                    unoptimized
+                                    className="object-cover"
                                 />
                               </div>
                             ) : null}
@@ -2133,8 +2131,7 @@ const deleteBatch = (batchId: string) => {
             <button
               type="button"
               onClick={setFeatured}
-              className={`inline-flex flex-1 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition ${
-                trip.featured
+                className={`inline-flex flex-1 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition ${trip.featured
                   ? "bg-orange-500 text-white hover:bg-orange-600"
                   : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
               }`}
@@ -2153,8 +2150,7 @@ const deleteBatch = (batchId: string) => {
             {error && <p className="self-center text-sm text-red-600">{error}</p>}
             {status && (
               <p
-                className={`self-center text-sm ${
-                  status.type === "success" ? "text-green-600" : "text-red-600"
+                  className={`self-center text-sm ${status.type === "success" ? "text-green-600" : "text-red-600"
                 }`}
               >
                 {status.message}
