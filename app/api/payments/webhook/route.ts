@@ -1,5 +1,6 @@
 import crypto from "crypto";
 
+import { readLimitedText } from "@/lib/request-json";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -65,8 +66,6 @@ export async function POST(
      * IMPORTANT:
      * Read RAW body before JSON.parse().
      */
-    const rawBody =
-      await request.text();
 
     const signature =
       request.headers.get(
@@ -103,6 +102,50 @@ export async function POST(
         }
       );
     }
+
+      const contentType =
+      request.headers.get("content-type") || "";
+
+    if (
+      !contentType
+        .toLowerCase()
+        .includes("application/json")
+    ) {
+      return Response.json(
+        {
+          error:
+            "Content-Type must be application/json.",
+        },
+        {
+          status: 415,
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
+    const bodyResult =
+      await readLimitedText(
+        request,
+        128 * 1024
+      );
+
+    if (!bodyResult.ok) {
+      return Response.json(
+        {
+          error: bodyResult.error,
+        },
+        {
+          status: bodyResult.status,
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
+    const rawBody = bodyResult.value;
 
     /*
      * Verify Razorpay signature BEFORE
