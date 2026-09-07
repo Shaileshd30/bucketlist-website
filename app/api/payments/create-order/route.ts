@@ -2,6 +2,7 @@ import Razorpay from "razorpay";
 
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { readLimitedJsonObject } from "@/lib/request-json";
+import { consumeApiRateLimit } from "@/lib/api-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,8 @@ type BookingRow = {
   email: string;
 
   amount_payable_now:
-    | number
-    | string;
+  | number
+  | string;
 
   payment_status: string;
   booking_status: string;
@@ -64,9 +65,9 @@ function isRecentPaymentAttempt(
   return (
     ageMs >= 0 &&
     ageMs <=
-      REUSABLE_ORDER_MINUTES *
-        60 *
-        1000
+    REUSABLE_ORDER_MINUTES *
+    60 *
+    1000
   );
 }
 
@@ -74,7 +75,56 @@ export async function POST(
   request: Request
 ) {
   try {
-        const bodyResult =
+        let rateLimit;
+
+    try {
+      rateLimit =
+        await consumeApiRateLimit(
+          request,
+          "create-payment-order",
+          10,
+          15 * 60
+        );
+    } catch (error) {
+      console.error(
+        "Payment-order rate limit failed:",
+        error
+      );
+
+      return Response.json(
+        {
+          error:
+            "Payment service is temporarily unavailable.",
+        },
+        {
+          status: 503,
+          headers: {
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
+    }
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          error:
+            "Too many payment attempts. Please try again later.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(
+              rateLimit.retryAfterSeconds
+            ),
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
+    }
+    const bodyResult =
       await readLimitedJsonObject(
         request,
         2 * 1024
@@ -287,9 +337,9 @@ export async function POST(
 
     const {
       data:
-        existingPaymentData,
+      existingPaymentData,
       error:
-        existingPaymentError,
+      existingPaymentError,
     } = await supabaseAdmin
       .from("payments")
       .select(
@@ -334,8 +384,8 @@ export async function POST(
 
     const existingPayment =
       existingPaymentData as
-        | PaymentRow
-        | null;
+      | PaymentRow
+      | null;
 
     if (
       existingPayment &&
@@ -343,9 +393,9 @@ export async function POST(
       Number(
         existingPayment.amount
       ) ===
-        amountInRupees &&
+      amountInRupees &&
       existingPayment.currency ===
-        "INR" &&
+      "INR" &&
       isRecentPaymentAttempt(
         existingPayment.created_at
       )
@@ -364,22 +414,22 @@ export async function POST(
         const existingOrderCurrency =
           String(
             existingOrder.currency ||
-              ""
+            ""
           ).toUpperCase();
 
         const existingOrderStatus =
           String(
             existingOrder.status ||
-              ""
+            ""
           ).toLowerCase();
 
         const orderStillUsable =
           existingOrderAmount ===
-            amountInPaise &&
+          amountInPaise &&
           existingOrderCurrency ===
-            "INR" &&
+          "INR" &&
           existingOrderStatus ===
-            "created";
+          "created";
 
         if (
           orderStillUsable
@@ -497,7 +547,7 @@ export async function POST(
 
     const {
       error:
-        paymentInsertError,
+      paymentInsertError,
     } = await supabaseAdmin
       .from("payments")
       .insert({

@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin-auth";
 
 import type { Booking } from "@/app/data/bookings";
 import { readLimitedJsonObject } from "@/lib/request-json";
+import { consumeApiRateLimit } from "@/lib/api-rate-limit";
+
 
 export const dynamic = "force-dynamic";
 const CURRENT_TERMS_VERSION = "2026-09-05";
@@ -444,7 +446,56 @@ export async function POST(
   request: Request
 ) {
   try {
-        const bodyResult =
+    let rateLimit;
+
+    try {
+      rateLimit =
+        await consumeApiRateLimit(
+          request,
+          "create-booking",
+          5,
+          15 * 60
+        );
+    } catch (error) {
+      console.error(
+        "Booking rate limit failed:",
+        error
+      );
+
+      return Response.json(
+        {
+          error:
+            "Booking service is temporarily unavailable.",
+        },
+        {
+          status: 503,
+          headers: {
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
+    }
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          error:
+            "Too many booking attempts. Please try again later.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(
+              rateLimit.retryAfterSeconds
+            ),
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
+    }
+    const bodyResult =
       await readLimitedJsonObject(
         request,
         16 * 1024

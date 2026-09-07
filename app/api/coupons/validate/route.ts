@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { readLimitedJsonObject } from "@/lib/request-json";
+import { consumeApiRateLimit } from "@/lib/api-rate-limit";
 
 type ValidateCouponRequest = {
   code?: string;
@@ -21,22 +22,22 @@ type CouponRow = {
   description: string | null;
 
   discount_type:
-    | "PERCENTAGE"
-    | "FIXED_AMOUNT";
+  | "PERCENTAGE"
+  | "FIXED_AMOUNT";
 
   discount_value:
-    | number
-    | string;
+  | number
+  | string;
 
   minimum_booking_amount:
-    | number
-    | string
-    | null;
+  | number
+  | string
+  | null;
 
   maximum_discount:
-    | number
-    | string
-    | null;
+  | number
+  | string
+  | null;
 
   valid_from: string | null;
   valid_until: string | null;
@@ -45,12 +46,12 @@ type CouponRow = {
   used_count: number;
 
   status:
-    | "ACTIVE"
-    | "INACTIVE";
+  | "ACTIVE"
+  | "INACTIVE";
 
   scope:
-    | "ALL_TRIPS"
-    | "SELECTED_TRIPS";
+  | "ALL_TRIPS"
+  | "SELECTED_TRIPS";
 };
 
 function normalizeCode(
@@ -87,10 +88,10 @@ function calculateDiscount(
 
   const maximumDiscount =
     coupon.maximum_discount !==
-    null
+      null
       ? Number(
-          coupon.maximum_discount
-        )
+        coupon.maximum_discount
+      )
       : 0;
 
   if (
@@ -109,7 +110,62 @@ export async function POST(
   request: Request
 ) {
   try {
-        const bodyResult =
+    let rateLimit;
+
+    try {
+      rateLimit =
+        await consumeApiRateLimit(
+          request,
+          "validate-coupon",
+          30,
+          60
+        );
+    } catch (error) {
+      console.error(
+        "Coupon rate limit failed:",
+        error
+      );
+
+      return Response.json(
+        {
+          valid: false,
+          message:
+            "Coupon service is temporarily unavailable.",
+          discountAmount: 0,
+          finalAmount: 0,
+        } satisfies CouponValidationResult,
+        {
+          status: 503,
+          headers: {
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
+    }
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          valid: false,
+          message:
+            "Too many coupon attempts. Please try again shortly.",
+          discountAmount: 0,
+          finalAmount: 0,
+        } satisfies CouponValidationResult,
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(
+              rateLimit.retryAfterSeconds
+            ),
+            "Cache-Control":
+              "no-store",
+          },
+        }
+      );
+    }
+    const bodyResult =
       await readLimitedJsonObject(
         request,
         4 * 1024
@@ -317,9 +373,9 @@ export async function POST(
 
     if (
       coupon.usage_limit !==
-        null &&
+      null &&
       coupon.used_count >=
-        coupon.usage_limit
+      coupon.usage_limit
     ) {
       return Response.json({
         valid: false,
@@ -398,7 +454,7 @@ export async function POST(
       const {
         data: tripData,
         error:
-          tripLookupError,
+        tripLookupError,
       } = await supabaseAdmin
         .from("trips")
         .select("id")
@@ -434,7 +490,7 @@ export async function POST(
       const {
         data: relation,
         error:
-          relationError,
+        relationError,
       } = await supabaseAdmin
         .from(
           "coupon_trips"
@@ -492,7 +548,7 @@ export async function POST(
         0,
 
         bookingAmount -
-          discountAmount
+        discountAmount
       );
 
     return Response.json({
