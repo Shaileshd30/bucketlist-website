@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import Razorpay from "razorpay";
 
+import { consumeApiRateLimit } from "@/lib/api-rate-limit";
+import { readLimitedJsonObject } from "@/lib/request-json";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -93,42 +95,76 @@ export async function POST(
      * ---------------------------------------------
      */
 
-    let body: VerifyPaymentRequest;
+    let rateLimit;
 
-try {
-  const parsedBody: unknown =
-    await request.json();
+    try {
+      rateLimit =
+        await consumeApiRateLimit(
+          request,
+          "verify-payment",
+          15,
+          15 * 60
+        );
+    } catch (error) {
+      console.error(
+        "Payment-verification rate limit failed:",
+        error
+      );
 
-  if (
-    parsedBody === null ||
-    typeof parsedBody !== "object" ||
-    Array.isArray(parsedBody)
-  ) {
-    return Response.json(
-      {
-        error:
-          "Invalid JSON request body.",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
-
-  body =
-    parsedBody as VerifyPaymentRequest;
-} catch {
-  return Response.json(
-    {
-      error:
-        "Invalid JSON request body.",
-    },
-    {
-      status: 400,
+      return Response.json(
+        {
+          error:
+            "Payment verification is temporarily unavailable.",
+        },
+        {
+          status: 503,
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        }
+      );
     }
-  );
-}
 
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          error:
+            "Too many payment verification attempts. Please try again later.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(
+              rateLimit.retryAfterSeconds
+            ),
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
+    const bodyResult =
+      await readLimitedJsonObject(
+        request,
+        4 * 1024
+      );
+
+    if (!bodyResult.ok) {
+      return Response.json(
+        {
+          error: bodyResult.error,
+        },
+        {
+          status: bodyResult.status,
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
+    const body =
+      bodyResult.value as unknown as VerifyPaymentRequest;
     const bookingId =
       body.bookingId?.trim();
 
