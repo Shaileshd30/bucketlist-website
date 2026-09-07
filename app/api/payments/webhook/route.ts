@@ -1,7 +1,11 @@
 import crypto from "crypto";
 
+import {
+  processCustomBookingPaymentLinkWebhook,
+} from "@/lib/custom-booking-webhook";
 import { readLimitedText } from "@/lib/request-json";
 import { supabaseAdmin } from "@/lib/supabase-server";
+
 
 export const dynamic = "force-dynamic";
 
@@ -178,6 +182,14 @@ export async function POST(
       JSON.parse(
         rawBody
       ) as RazorpayWebhookPayload;
+          const customBookingResponse =
+      await processCustomBookingPaymentLinkWebhook(
+        payload
+      );
+
+    if (customBookingResponse) {
+      return customBookingResponse;
+    }
 
     /*
      * For now we only need payment.captured.

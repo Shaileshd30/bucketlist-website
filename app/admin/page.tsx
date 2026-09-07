@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import CouponManager from "./components/CouponManager";
+import CustomBookingManager from "./components/CustomBookingManager";
 import { useEffect, useState } from "react";
 import {
   defaultTrips,
@@ -64,7 +65,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [siteSynced, setSiteSynced] = useState(true);
-  const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS">("TRIPS");
+  const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS" | "CUSTOM_BOOKINGS">("TRIPS");
   const [newTripSlugs, setNewTripSlugs] = useState<string[]>([]);
   const [isDeletingTrip, setIsDeletingTrip] = useState(false);
   const [itineraryFormatOverrides, setItineraryFormatOverrides] = useState<Record<string, ItineraryFormat>>({});
@@ -1180,6 +1181,17 @@ const deleteBatch = (batchId: string) => {
             Coupons & Discounts
           </button>
         </div>
+          <button
+            type="button"
+            onClick={() => setAdminSection("CUSTOM_BOOKINGS")}
+            className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+              adminSection === "CUSTOM_BOOKINGS"
+                ? "bg-[#17251d] text-white"
+                : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
+            }`}
+          >
+            Custom Bookings
+          </button>
 
         {adminSection === "TRIPS" && (
         <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(0,0,0,0.06)] lg:p-8">
@@ -2162,6 +2174,9 @@ const deleteBatch = (batchId: string) => {
 
         {adminSection === "COUPONS" && (
           <CouponManager trips={trips} />
+        )}
+        {adminSection === "CUSTOM_BOOKINGS" && (
+          <CustomBookingManager />
         )}
       </div>
     </main>
