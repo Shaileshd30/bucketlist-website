@@ -29,9 +29,6 @@ type PaymentLinkWebhookPayload = {
 
 type CustomBookingLookupRow = {
   id: string;
-  booking_reference: string;
-  advance_amount: number | string;
-  amount_paid: number | string;
 };
 
 export async function
@@ -108,14 +105,7 @@ processCustomBookingPaymentLinkWebhook(
     error: lookupError,
   } = await supabaseAdmin
     .from("custom_bookings")
-    .select(
-      `
-        id,
-        booking_reference,
-        advance_amount,
-        amount_paid
-      `
-    )
+    .select("id")
     .eq(
       "razorpay_payment_link_id",
       paymentLink.id
@@ -145,139 +135,6 @@ processCustomBookingPaymentLinkWebhook(
       ignored: true,
       reason:
         "CUSTOM_PAYMENT_LINK_NOT_FOUND",
-    });
-  }
-
-    /*
-   * Razorpay may deliver the same event
-   * repeatedly. Detect an already-recorded
-   * payment before recalculating the amount due.
-   */
-  const {
-    data: existingPayment,
-    error: existingPaymentError,
-  } = await supabaseAdmin
-    .from(
-      "custom_booking_payments"
-    )
-    .select(
-      "id, custom_booking_id"
-    )
-    .eq(
-      "provider_payment_id",
-      payment.id
-    )
-    .maybeSingle();
-
-  if (existingPaymentError) {
-    throw existingPaymentError;
-  }
-
-  if (existingPayment) {
-    if (
-      existingPayment.custom_booking_id !==
-      booking.id
-    ) {
-      console.error(
-        "Razorpay payment ID belongs to another custom booking:",
-        payment.id
-      );
-
-      return Response.json({
-        ok: true,
-        manualReview: true,
-        reason:
-          "CUSTOM_PAYMENT_BOOKING_MISMATCH",
-      });
-    }
-
-    return Response.json({
-      ok: true,
-      event:
-        payload.event,
-      idempotent: true,
-      customBookingId:
-        booking.id,
-    });
-  }
-
-  const expectedAmountInPaise =
-    Math.round(
-      (
-        Number(
-          booking.advance_amount
-        ) -
-        Number(
-          booking.amount_paid
-        )
-      ) * 100
-    );
-
-  if (
-    payment.amount !==
-    expectedAmountInPaise
-  ) {
-    console.error(
-      "Custom booking payment amount mismatch:",
-      booking.booking_reference
-    );
-
-    const {
-      error: reviewError,
-    } = await supabaseAdmin
-      .from("custom_bookings")
-      .update({
-        booking_status:
-          "MANUAL_REVIEW",
-      })
-      .eq(
-        "id",
-        booking.id
-      );
-
-    if (reviewError) {
-      throw reviewError;
-    }
-
-    return Response.json({
-      ok: true,
-      manualReview: true,
-      reason:
-        "CUSTOM_PAYMENT_AMOUNT_MISMATCH",
-    });
-  }
-
-  if (
-    payment.currency.toUpperCase() !==
-    "INR"
-  ) {
-    console.error(
-      "Custom booking payment currency mismatch:",
-      booking.booking_reference
-    );
-
-    const {
-      error: reviewError,
-    } = await supabaseAdmin
-      .from("custom_bookings")
-      .update({
-        booking_status:
-          "MANUAL_REVIEW",
-      })
-      .eq(
-        "id",
-        booking.id
-      );
-
-    if (reviewError) {
-      throw reviewError;
-    }
-
-    return Response.json({
-      ok: true,
-      manualReview: true,
-      reason:
-        "CUSTOM_PAYMENT_CURRENCY_MISMATCH",
     });
   }
 
