@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import HomeTripCarousel from "./components/HomeTripCarousel";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
@@ -37,6 +38,8 @@ type GoogleReviewsResponse = {
 };
 
 export default function Home() {
+  const [carouselTrips, setCarouselTrips] = useState<TripData[] | null>(null);
+  const [carouselLoadFailed, setCarouselLoadFailed] = useState(false);
   const [trips, setTrips] =
     useState<TripData[]>(defaultTrips);
 
@@ -107,6 +110,7 @@ export default function Home() {
         );
 
         if (!response.ok) {
+          setCarouselLoadFailed(true);
           setFeaturedTrip(
             defaultTrips.find(
               (trip) => trip.featured
@@ -116,6 +120,12 @@ export default function Home() {
         }
 
         const data = await response.json();
+
+        if (Array.isArray(data)) {
+          setCarouselTrips(data as TripData[]);
+        } else {
+          setCarouselLoadFailed(true);
+        }
 
         if (
           Array.isArray(data) &&
@@ -157,6 +167,7 @@ export default function Home() {
           setFeaturedTrip(featured);
         }
       } catch (error) {
+        setCarouselLoadFailed(true);
         console.error(
           "Unable to load trips:",
           error
@@ -373,6 +384,12 @@ export default function Home() {
 
     tryPlay();
   }, [heroVideoFailed]);
+
+  // Recalculate the pinned story after live trip cards change the layout.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => ScrollTrigger.refresh());
+    return () => cancelAnimationFrame(frame);
+  }, [carouselTrips, carouselLoadFailed]);
 
   return (
     <main className="min-h-screen bg-[#f5f3ee] text-[#17251d]">
@@ -733,6 +750,8 @@ export default function Home() {
   </div>
 
 </section>
+
+      <HomeTripCarousel trips={carouselTrips} loadFailed={carouselLoadFailed} />
 
       {/* ABOUT / OUR STORY */}
 <section
@@ -1235,416 +1254,6 @@ export default function Home() {
         ))}
       </section>
 
-
-      {/* UPCOMING ADVENTURES */}
-<section
-  id="adventures"
-  className="mx-auto max-w-[1400px] px-6 py-16 sm:py-20 lg:px-10 lg:py-32"
->
-  <div className="mb-12 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-    <div>
-      <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
-        Upcoming adventures
-      </p>
-
-      <h2 className="max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-        Your next story
-        <span className="block text-[#8a958e]">
-          starts on the trail.
-        </span>
-      </h2>
-    </div>
-
-    <Link
-      href="/trips"
-      className="inline-flex w-fit items-center rounded-full border border-[#17251d]/15 bg-white px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
-    >
-      View all adventures
-      <span className="ml-2">↗</span>
-    </Link>
-  </div>
-
-  {(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const getUpcomingBatches = (trip: TripData) =>
-      (trip.batches || [])
-        .filter(
-          (batch) =>
-            batch.visibility === "PUBLIC" &&
-            batch.status === "OPEN" &&
-            batch.bookingEnabled &&
-            new Date(batch.departureDate).getTime() >=
-              today.getTime()
-        )
-        .sort(
-          (a, b) =>
-            new Date(a.departureDate).getTime() -
-            new Date(b.departureDate).getTime()
-        );
-
-    const upcomingTrips = trips
-      .filter(
-        (trip) =>
-          trip.upcoming === true &&
-          getUpcomingBatches(trip).length > 0
-      )
-      .sort((a, b) => {
-        const aBatch =
-          getUpcomingBatches(a)[0];
-
-        const bBatch =
-          getUpcomingBatches(b)[0];
-
-        if (!aBatch && !bBatch) return 0;
-        if (!aBatch) return 1;
-        if (!bBatch) return -1;
-
-        return (
-          new Date(
-            aBatch.departureDate
-          ).getTime() -
-          new Date(
-            bBatch.departureDate
-          ).getTime()
-        );
-      });
-
-    if (upcomingTrips.length === 0) {
-      return (
-        <div className="rounded-[28px] border border-black/10 bg-white p-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
-          <p className="text-lg font-semibold text-[#17251d]">
-            New adventures are being planned.
-          </p>
-
-          <p className="mt-2 text-sm text-[#718078]">
-            Check back soon or contact us for a custom trip.
-          </p>
-
-          <a
-            href="https://wa.me/918482846287"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex rounded-full bg-[#17251d] px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-500"
-          >
-            Plan a custom trip
-          </a>
-        </div>
-      );
-    }
-
-    return upcomingTrips.length === 1 ? (
-  (() => {
-    const trip = upcomingTrips[0];
-
-    const upcomingBatches =
-      getUpcomingBatches(trip);
-
-    const nextBatch =
-      upcomingBatches[0] || null;
-
-    const availableSeats =
-      nextBatch
-        ? Math.max(
-            0,
-            Number(nextBatch.totalSeats || 0) -
-              Number(nextBatch.bookedSeats || 0)
-          )
-        : null;
-
-    const displayPrice =
-      nextBatch
-        ? formatPrice(Number(nextBatch.price))
-        : trip.price || "Price on request";
-
-    const displayDate =
-      nextBatch
-        ? new Date(
-            nextBatch.departureDate
-          ).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })
-        : "Dates coming soon";
-
-    const displayDuration =
-      trip.duration ||
-      (trip.durationDays
-                  ? `${trip.durationDays} ${trip.durationDays === 1
-              ? "Day"
-              : "Days"
-          }`
-        : "Flexible");
-
-    return (
-      <a
-        href={`/trips/${trip.slug}`}
-        className="group grid overflow-hidden rounded-[34px] border border-black/10 bg-white shadow-[0_28px_80px_rgba(0,0,0,0.08)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_34px_90px_rgba(0,0,0,0.13)] lg:grid-cols-[1.15fr_0.85fr]"
-      >
-        {/* IMAGE */}
-        <div className="relative min-h-[420px] overflow-hidden lg:min-h-[520px]">
-          {trip.image && (
-                      <Image
-              src={trip.image}
-              alt={trip.title}
-                        fill
-                        sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                        unoptimized
-                        className="object-cover object-center transition duration-700 group-hover:scale-105"
-            />
-          )}
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/10" />
-
-          <div className="absolute left-6 top-6 flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/20 bg-black/25 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-              {trip.travelCategory || trip.category}
-            </span>
-
-            {trip.difficulty && (
-              <span className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                {trip.difficulty}
-              </span>
-            )}
-          </div>
-
-          <div className="absolute inset-x-0 bottom-6 p-7 sm:p-9">
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-orange-300">
-              Featured departure
-            </p>
-
-            <h3 className="max-w-2xl text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-              {trip.title}
-            </h3>
-
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/75">
-              {trip.startPoint && (
-                <span>{trip.startPoint}</span>
-              )}
-
-              <span>{displayDuration}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CONTENT */}
-        <div className="flex flex-col justify-between p-7 sm:p-9 lg:p-10">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.26em] text-orange-500">
-              Next adventure
-            </p>
-
-            <p className="mt-5 text-lg leading-8 text-[#5d6862]">
-              {trip.summary}
-            </p>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[22px] bg-[#f7f5f2] p-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/45">
-                  Departure
-                </p>
-
-                <p className="mt-2 text-lg font-bold text-[#17251d]">
-                  {displayDate}
-                </p>
-              </div>
-
-              <div className="rounded-[22px] bg-[#f7f5f2] p-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/45">
-                  From
-                </p>
-
-                <p className="mt-2 text-lg font-bold text-[#17251d]">
-                  {displayPrice}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-[22px] border border-black/10 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/45">
-                Availability
-              </p>
-
-              <p className="mt-2 text-lg font-bold text-[#17251d]">
-                {availableSeats !== null
-                  ? availableSeats > 0
-                              ? `${availableSeats} ${availableSeats === 1
-                          ? "seat"
-                          : "seats"
-                      } left`
-                    : "Sold out"
-                  : "Enquire for availability"}
-              </p>
-            </div>
-
-            {upcomingBatches.length > 1 && (
-              <p className="mt-5 text-sm font-medium text-[#718078]">
-                + {upcomingBatches.length - 1} more{" "}
-                {upcomingBatches.length - 1 === 1
-                  ? "departure"
-                  : "departures"}{" "}
-                available
-              </p>
-            )}
-          </div>
-
-          <div className="mt-10 flex items-center justify-between border-t border-black/10 pt-6">
-            <span className="text-sm font-semibold text-[#17251d]">
-              View adventure
-            </span>
-
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#17251d] text-lg text-white transition group-hover:bg-orange-500">
-              ↗
-            </span>
-          </div>
-        </div>
-      </a>
-    );
-  })()
-) : (
-  <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
-    {upcomingTrips.map((trip) => {
-      const upcomingBatches =
-        getUpcomingBatches(trip);
-
-      const nextBatch =
-        upcomingBatches[0] || null;
-
-      const availableSeats =
-        nextBatch
-          ? Math.max(
-              0,
-              Number(nextBatch.totalSeats || 0) -
-                Number(nextBatch.bookedSeats || 0)
-            )
-          : null;
-
-      const displayPrice =
-        nextBatch
-          ? formatPrice(Number(nextBatch.price))
-          : trip.price || "Price on request";
-
-      const displayDate =
-        nextBatch
-          ? new Date(
-              nextBatch.departureDate
-            ).toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })
-          : "Dates coming soon";
-
-      const displayDuration =
-        trip.duration ||
-        (trip.durationDays
-                    ? `${trip.durationDays} ${trip.durationDays === 1
-                ? "Day"
-                : "Days"
-            }`
-          : "Flexible");
-
-      return (
-        <a
-          key={trip.slug}
-          href={`/trips/${trip.slug}`}
-          className="group overflow-hidden rounded-[30px] border border-black/10 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.06)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_30px_80px_rgba(0,0,0,0.12)]"
-        >
-          <div className="relative h-64 overflow-hidden sm:h-72">
-            {trip.image && (
-                        <Image
-                src={trip.image}
-                alt={trip.title}
-                          fill
-                          sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                          unoptimized
-                          className="object-cover object-center transition duration-700 group-hover:scale-105"
-              />
-            )}
-
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
-
-            <div className="absolute left-5 top-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/20 bg-black/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                {trip.travelCategory || trip.category}
-              </span>
-
-              {trip.difficulty && (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                  {trip.difficulty}
-                </span>
-              )}
-            </div>
-
-            <div className="absolute bottom-5 left-5 right-5">
-              <h3 className="text-2xl font-bold text-white sm:text-3xl">
-                {trip.title}
-              </h3>
-
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/75">
-                {trip.startPoint && (
-                  <span>{trip.startPoint}</span>
-                )}
-
-                <span>{displayDuration}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6">
-            <p className="line-clamp-2 text-sm leading-6 text-[#5d6862]">
-              {trip.summary}
-            </p>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-[#f7f5f2] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/50">
-                  Next departure
-                </p>
-
-                <p className="mt-2 text-sm font-semibold text-[#17251d]">
-                  {displayDate}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-[#f7f5f2] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/50">
-                  From
-                </p>
-
-                <p className="mt-2 text-sm font-semibold text-[#17251d]">
-                  {displayPrice}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#17251d]/45">
-                  Availability
-                </p>
-
-                <p className="mt-1 text-sm font-semibold text-[#17251d]">
-                  {availableSeats !== null
-                    ? `${availableSeats} seats left`
-                    : "Enquire for availability"}
-                </p>
-              </div>
-
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#17251d] text-lg text-white transition group-hover:bg-orange-500">
-                ↗
-              </span>
-            </div>
-          </div>
-        </a>
-      );
-    })}
-  </div>
-    );
-  })()}
-</section>
 
         {/* LIVE GOOGLE REVIEWS / TRAVELLER STORIES */}
 <section className="relative overflow-hidden bg-white px-6 py-20 sm:py-24 lg:px-10 lg:py-36">
