@@ -494,7 +494,7 @@ export default function Home() {
       </Link>
 
       {/* Desktop nav */}
-      <nav className="hidden items-center gap-8 rounded-full border border-white/15 bg-black/10 px-7 py-3 text-sm font-medium text-white/90 backdrop-blur-md lg:flex">
+      <nav className="hidden items-center gap-4 rounded-full border border-white/15 bg-black/10 px-7 py-3 text-sm font-medium text-white/90 backdrop-blur-md lg:flex">
         <Link
           href="/about"
           className="transition hover:text-orange-400"
@@ -517,11 +517,13 @@ export default function Home() {
         </a>
 
         <a
-          href="#contact"
+          href="/contact"
           className="transition hover:text-orange-400"
         >
           Contact
         </a>
+        <Link href="/our-team" className="transition hover:text-orange-400">Our Team</Link>
+        <Link href="/corporate-outings-pune" className="transition hover:text-orange-400">Corporate</Link>
       </nav>
 
       <div className="flex items-center gap-3">
@@ -607,7 +609,9 @@ export default function Home() {
           { label: "Destinations", href: "#destinations", note: "India & beyond" },
           { label: "Upcoming Adventures", href: "#adventures", note: "Fixed departures" },
           { label: "About Bucketlist", href: "/about", note: "Our story & approach" },
-          { label: "Contact", href: "#contact", note: "Talk to our team" },
+          { label: "Our Team", href: "/our-team", note: "Meet our people" },
+          { label: "Corporate", href: "/corporate-outings-pune", note: "Team outings" },
+          { label: "Contact", href: "/contact", note: "Talk to our team" },
         ].map((item) => (
           <a
             key={item.label}
@@ -812,7 +816,7 @@ export default function Home() {
           </a>
 
           <a
-            href="#contact"
+            href="/contact"
             className="inline-flex items-center rounded-full border border-[#17251d]/15 bg-white px-6 py-4 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
           >
             Talk to our team
@@ -1518,233 +1522,7 @@ export default function Home() {
   </div>
 </section>
 
-       {/* MEET THE TEAM */}
-<section className="relative overflow-hidden bg-[#f5f3ee] px-6 py-20 sm:py-24 lg:px-10 lg:py-36">
-  <div className="mx-auto max-w-[1400px]">
-
-    {/* Heading */}
-    <div className="mb-14 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-      <div>
-        <p className="mb-5 text-sm font-bold uppercase tracking-[0.32em] text-orange-500">
-          Meet the Team
-        </p>
-
-        <h2 className="max-w-4xl text-4xl font-bold leading-[0.95] tracking-[-0.045em] text-[#17251d] sm:text-5xl lg:text-7xl">
-          The people behind
-          <span className="block text-[#8a958e]">
-            every great journey.
-          </span>
-        </h2>
-      </div>
-
-      <div className="lg:pb-2">
-        <p className="max-w-xl text-lg leading-8 text-[#5d6862]">
-          Leadership shaped by real mountain experience, thoughtful planning
-          and a shared commitment to creating journeys that are safe,
-          memorable and deeply rewarding.
-        </p>
-      </div>
-    </div>
-
-    {/* Leadership cards */}
-    <div className="grid gap-8 lg:grid-cols-2">
-
-      {/* RUTURAJ */}
-      <article className="group overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.07)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_34px_90px_rgba(0,0,0,0.12)]">
-
-        <div className="relative aspect-[4/4.5] overflow-hidden bg-[#17251d]">
-          <Image
-            src="/images/team/ruturaj.jpg"
-            loading="lazy"
-            alt="Ruturaj Agawane - Founder of Bucketlist Adventure"
-            fill
-            className="object-cover object-center transition duration-700 group-hover:scale-[1.03]"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-[#07120d]/90 via-transparent to-black/5" />
-
-          <div className="absolute left-6 top-6">
-            <span className="rounded-full border border-white/20 bg-black/20 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white backdrop-blur-md">
-              Leadership
-            </span>
-          </div>
-
-          <div className="absolute inset-x-0 bottom-0 p-7 sm:p-9">
-            <p className="text-xs font-bold uppercase tracking-[0.26em] text-orange-300">
-              Founder
-            </p>
-
-            <h3 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Ruturaj Agawane
-            </h3>
-          </div>
-        </div>
-
-        <div className="p-7 sm:p-8">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange-500">
-            Mountain Credentials
-          </p>
-
-          <p className="mt-3 text-base leading-7 text-[#5d6862]">
-            BMC Certified Mountaineer • Mt. Yunam • Mt. UT Kangri
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {["Vision", "Leadership", "Experience Design"].map((item) => (
-              <span
-                key={item}
-                className="rounded-full bg-[#f5f3ee] px-4 py-2 text-xs font-semibold text-[#17251d]"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </article>
-
-      {/* SHAILESH */}
-      <article className="group overflow-hidden rounded-[32px] border border-black/10 bg-white shadow-[0_24px_70px_rgba(0,0,0,0.07)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_34px_90px_rgba(0,0,0,0.12)]">
-
-        <div className="relative aspect-[4/4.5] overflow-hidden bg-[#17251d]">
-          <Image
-            src="/images/team/shailesh.jpg"
-            loading="lazy"
-            alt="Shailesh Deshmukh - Director Strategy and Business Development"
-            fill
-            className="object-cover object-center transition duration-700 group-hover:scale-[1.03]"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-[#07120d]/90 via-transparent to-black/5" />
-
-          <div className="absolute left-6 top-6">
-            <span className="rounded-full border border-white/20 bg-black/20 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white backdrop-blur-md">
-              Leadership
-            </span>
-          </div>
-
-          <div className="absolute inset-x-0 bottom-0 p-7 sm:p-9">
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-orange-300">
-              Director – Strategy & Business Development
-            </p>
-
-            <h3 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Shailesh Deshmukh
-            </h3>
-          </div>
-        </div>
-
-        <div className="p-7 sm:p-8">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange-500">
-            Mountain Credentials
-          </p>
-
-          <p className="mt-3 text-base leading-7 text-[#5d6862]">
-            • Mt. Yunam • Mt. UT Kangri
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {["Strategy", "Partnerships", "Business Growth"].map((item) => (
-              <span
-                key={item}
-                className="rounded-full bg-[#f5f3ee] px-4 py-2 text-xs font-semibold text-[#17251d]"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </article>
-
-    </div>
-    {/* LEGACY — PRANITA DAPHAL */}
-<div className="mt-12 overflow-hidden rounded-[32px] border border-black/10 bg-[#ebe7df] shadow-[0_24px_70px_rgba(0,0,0,0.06)]">
-  <div className="grid lg:grid-cols-[0.85fr_1.15fr]">
-
-    {/* Photo */}
-    <div className="relative min-h-[420px] overflow-hidden sm:min-h-[520px] lg:min-h-[580px]">
-      <Image
-        src="/images/team/pranita.jpg"
-            loading="lazy"
-        alt="Pranita Daphal - Co-Founder of Bucketlist Adventure"
-        fill
-        className="object-cover object-center"
-        sizes="(max-width: 1024px) 100vw, 42vw"
-      />
-
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-    </div>
-
-    {/* Tribute */}
-    <div className="flex items-center px-7 py-12 sm:px-12 sm:py-16 lg:px-16 lg:py-20">
-      <div className="max-w-2xl">
-
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-orange-500">
-          In Loving Memory
-        </p>
-
-        <h3 className="mt-5 text-4xl font-bold tracking-[-0.035em] text-[#17251d] sm:text-5xl lg:text-6xl">
-          Pranita Daphal
-        </h3>
-
-        <p className="mt-3 text-sm font-bold uppercase tracking-[0.2em] text-[#17251d]/55">
-          Co-Founder • Bucketlist Adventure
-        </p>
-
-        <div className="my-8 h-px w-20 bg-orange-400" />
-
-        <p className="text-xl font-medium leading-9 text-[#37463e] sm:text-2xl sm:leading-10">
-          “Some journeys leave footprints that never fade.”
-        </p>
-
-        <p className="mt-7 text-base leading-8 text-[#5d6862] sm:text-lg">
-          A cherished part of the foundation on which Bucketlist Adventure
-          was built. Her contribution, passion and spirit remain forever
-          woven into our journey.
-        </p>
-
-        <p className="mt-5 text-base leading-8 text-[#5d6862] sm:text-lg">
-          As we continue exploring new trails and creating new memories,
-          we carry forward the values and dreams that helped shape
-          Bucketlist Adventure from the beginning.
-        </p>
-
-        <div className="mt-9 flex items-center gap-4">
-          <div className="h-px w-10 bg-[#17251d]/25" />
-
-          <p className="text-sm font-semibold italic text-[#17251d]/65">
-            Forever a part of our story.
-          </p>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-</div>
-
-    {/* Bottom leadership statement */}
-    <div className="mt-10 flex flex-col gap-5 rounded-[28px] bg-[#17251d] px-7 py-7 text-white sm:px-9 lg:flex-row lg:items-center lg:justify-between">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-orange-300">
-          One philosophy
-        </p>
-
-        <p className="mt-2 max-w-3xl text-xl font-semibold leading-8 sm:text-2xl">
-          Plan every detail carefully. Let the traveller live the experience fully.
-        </p>
-      </div>
-
-      <p className="shrink-0 text-sm font-semibold text-white/60">
-        We Plan It. You Live It.
-      </p>
-    </div>
-
-  </div>
-</section>
-
-      {/* CHOOSE YOUR ADVENTURE */}
+       {/* CHOOSE YOUR ADVENTURE */}
 <section className="relative overflow-hidden bg-[#101812] px-6 py-20 text-white sm:py-24 lg:px-10 lg:py-36">
   <div className="mx-auto max-w-[1400px]">
 
@@ -1998,7 +1776,7 @@ export default function Home() {
 
       {/* CORPORATE */}
       <a
-        href="#contact"
+        href="/corporate-outings-pune"
         className="group relative min-h-[390px] overflow-hidden rounded-[30px] border border-white/10 md:col-span-2 xl:col-span-1"
       >
               <Image
@@ -2057,305 +1835,7 @@ export default function Home() {
 
   </div>
 </section>        
-{/* PLAN YOUR TRIP / CONTACT */}
-<section
-  id="contact"
-  className="relative overflow-hidden bg-[#f5f3ee] px-6 py-20 sm:py-24 lg:px-10 lg:py-36"
->
-  <div className="mx-auto max-w-[1400px]">
-
-    <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
-
-      {/* LEFT CONTENT */}
-      <div className="flex flex-col justify-between rounded-[34px] bg-[#17251d] p-8 text-white sm:p-10 lg:p-12">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.3em] text-orange-300">
-            Plan Your Trip
-          </p>
-
-          <h2 className="mt-5 max-w-xl text-4xl font-bold leading-[0.95] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
-            Your next adventure
-            <span className="block text-white/45">
-              starts with a conversation.
-            </span>
-          </h2>
-
-          <p className="mt-7 max-w-xl text-lg leading-8 text-white/65">
-            Tell us what you have in mind — destination, dates, group size
-            or even just the kind of experience you want. We&apos;ll help shape
-            the journey from there.
-          </p>
-
-          <div className="mt-9 space-y-5 border-t border-white/10 pt-7">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
-                Best for
-              </p>
-              <p className="mt-2 font-semibold">
-                Treks • Expeditions • Family Trips • Corporate Groups
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
-                Response
-              </p>
-              <p className="mt-2 font-semibold">
-                WhatsApp & direct planning support
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <a
-          href="https://wa.me/918482846287"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-10 inline-flex w-fit items-center rounded-full bg-orange-500 px-6 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-[#17251d]"
-        >
-          Chat on WhatsApp
-          <span className="ml-3">↗</span>
-        </a>
-      </div>
-
-      {/* RIGHT FORM */}
-<form
-  onSubmit={(event) => {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    const name = String(formData.get("name") || "");
-    const phone = String(formData.get("phone") || "");
-    const email = String(formData.get("email") || "");
-    const groupSize = String(formData.get("groupSize") || "");
-    const tripType = String(formData.get("tripType") || "");
-    const travelMonth = String(formData.get("travelMonth") || "");
-    const message = String(formData.get("message") || "");
-
-    const whatsappMessage = [
-      "Hi Bucketlist Adventure! 👋",
-      "",
-      "I would like to plan a trip.",
-      "",
-      `Name: ${name}`,
-      `Phone / WhatsApp: ${phone}`,
-      email ? `Email: ${email}` : "",
-      `Trip Type: ${tripType}`,
-      `Travel Month: ${travelMonth || "Flexible"}`,
-      `Group Size: ${groupSize}`,
-      "",
-      "Trip Details:",
-      message || "I would like to know more about suitable options.",
-      "",
-      "Please help me plan the trip.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const whatsappUrl =
-      `https://wa.me/918482846287?text=${encodeURIComponent(
-        whatsappMessage
-      )}`;
-
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  }}
-  className="rounded-[34px] border border-black/10 bg-white p-8 shadow-[0_24px_70px_rgba(0,0,0,0.06)] sm:p-10 lg:p-12"
->
-  <p className="text-sm font-bold uppercase tracking-[0.26em] text-orange-500">
-    Tell us about your trip
-  </p>
-
-  <div className="mt-8 grid gap-5 sm:grid-cols-2">
-
-    {/* NAME */}
-    <div>
-      <label
-        htmlFor="trip-name"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Name *
-      </label>
-
-      <input
-        id="trip-name"
-        name="name"
-        type="text"
-        required
-        placeholder="Your name"
-        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      />
-    </div>
-
-    {/* PHONE */}
-    <div>
-      <label
-        htmlFor="trip-phone"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Phone / WhatsApp *
-      </label>
-
-      <input
-        id="trip-phone"
-        name="phone"
-        type="tel"
-        required
-        placeholder="+91 98765 43210"
-        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      />
-    </div>
-
-    {/* EMAIL */}
-    <div>
-      <label
-        htmlFor="trip-email"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Email
-      </label>
-
-      <input
-        id="trip-email"
-        name="email"
-        type="email"
-        placeholder="you@example.com"
-        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      />
-    </div>
-
-    {/* GROUP SIZE */}
-    <div>
-      <label
-        htmlFor="trip-group-size"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Group Size *
-      </label>
-
-      <input
-        id="trip-group-size"
-        name="groupSize"
-        type="number"
-        min="1"
-        required
-        placeholder="No. of travellers"
-        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      />
-    </div>
-
-    {/* TRIP TYPE */}
-    <div>
-      <label
-        htmlFor="trip-type"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Trip Type *
-      </label>
-
-      <select
-        id="trip-type"
-        name="tripType"
-        required
-        defaultValue=""
-        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      >
-        <option value="" disabled>
-          Select trip type
-        </option>
-
-        <option value="Weekend Trek">
-          Weekend Trek
-        </option>
-
-        <option value="Himalayan Expedition">
-          Himalayan Expedition
-        </option>
-
-        <option value="Road Trip">
-          Road Trip
-        </option>
-
-        <option value="Backpacking">
-          Backpacking
-        </option>
-
-        <option value="Family Holiday">
-          Family Holiday
-        </option>
-
-        <option value="Corporate Outing">
-          Corporate Outing
-        </option>
-
-        <option value="Custom Trip">
-          Custom Trip
-        </option>
-      </select>
-    </div>
-
-    {/* TRAVEL MONTH */}
-    <div>
-      <label
-        htmlFor="trip-month"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Travel Month
-      </label>
-
-      <input
-        id="trip-month"
-        name="travelMonth"
-        type="month"
-        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      />
-    </div>
-
-    {/* MESSAGE */}
-    <div className="sm:col-span-2">
-      <label
-        htmlFor="trip-message"
-        className="mb-2 block text-sm font-semibold text-[#17251d]"
-      >
-        Tell us what you have in mind
-      </label>
-
-      <textarea
-        id="trip-message"
-        name="message"
-        rows={5}
-        placeholder="Destination, dates, preferences, special requirements..."
-        className="w-full resize-none rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-4 text-sm text-[#17251d] outline-none transition focus:border-orange-400"
-      />
-    </div>
-
-  </div>
-
-  {/* SUBMIT */}
-  <button
-    type="submit"
-    className="mt-7 inline-flex w-full items-center justify-center rounded-full bg-[#17251d] px-6 py-4 text-sm font-bold text-white transition hover:bg-orange-500"
-  >
-    Continue on WhatsApp
-    <span className="ml-3">
-      ↗
-    </span>
-  </button>
-
-  <p className="mt-4 text-center text-xs leading-5 text-[#8a958e]">
-    Your enquiry will open securely in WhatsApp. No payment is required.
-  </p>
-</form>
-
-    </div>
-  </div>
-</section>
-      {/* INSTAGRAM PROFILE */}
+{/* INSTAGRAM PROFILE */}
 <section className="bg-white px-6 py-16 sm:py-20 lg:px-10 lg:py-24">
   <div className="mx-auto max-w-[1400px]">
 
@@ -2418,67 +1898,7 @@ export default function Home() {
   </div>
 </section>
 
-      {/* CORPORATE CTA */}
-      <section
-        id="contact"
-        className="relative overflow-hidden bg-[#e8e1d4] px-6 py-16 sm:py-20 lg:px-10 lg:py-32"
-      >
-        <div className="mx-auto max-w-[1400px]">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-4xl">
-              <p className="mb-5 text-sm font-bold uppercase tracking-[0.3em] text-orange-500">
-                Corporate Adventures
-              </p>
-
-              <h2 className="text-4xl font-bold leading-[0.95] tracking-tight sm:text-6xl lg:text-8xl">
-                Take your team
-                <br />
-                <span className="text-[#718078]">beyond the office.</span>
-              </h2>
-            </div>
-
-            <a
-              href="https://wa.me/918482846287"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-fit items-center rounded-full bg-[#17251d] px-7 py-4 text-sm font-semibold text-white transition hover:bg-orange-500"
-            >
-              Plan a Corporate Adventure
-              <span className="ml-2 text-base">↗</span>
-            </a>
-          </div>
-
-          <div className="mt-10 flex flex-col gap-6 border-t border-[#17251d]/10 pt-8 md:flex-row md:items-center md:justify-between">
-            <p className="max-w-2xl text-lg leading-8 text-[#5d6862]">
-              Tailored adventure experiences, team outings, and unforgettable journeys designed
-              around your people, your pace, and the kind of memories your team will talk about for years.
-            </p>
-
-            <div className="grid grid-cols-2 gap-6 text-left text-sm text-[#5d6862] sm:grid-cols-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/60">
-                  Team builds
-                </p>
-                <p className="mt-2 font-semibold text-[#17251d]">Adventure</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/60">
-                  Best for
-                </p>
-                <p className="mt-2 font-semibold text-[#17251d]">Retreats</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#17251d]/60">
-                  Experience
-                </p>
-                <p className="mt-2 font-semibold text-[#17251d]">Custom</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-            {/* FINAL CTA */}
+      {/* FINAL CTA */}
       <section className="bg-[#17251d] px-6 py-20 text-center text-white sm:py-28 lg:px-10 lg:py-36">
         <div className="mx-auto max-w-[1400px]">
 
@@ -2587,7 +2007,7 @@ export default function Home() {
             All Trips
           </Link>
 
-          <a href="#contact" className="transition hover:text-white">
+          <a href="/contact" className="transition hover:text-white">
             Contact
           </a>
         </div>
@@ -2621,7 +2041,7 @@ export default function Home() {
             Custom Trips
           </a>
 
-          <a href="#contact" className="transition hover:text-white">
+          <a href="/corporate-outings-pune" className="transition hover:text-white">
             Corporate Adventures
           </a>
         </div>

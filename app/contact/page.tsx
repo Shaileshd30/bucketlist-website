@@ -1,3 +1,4 @@
+import TripEnquirySection from "../components/TripEnquirySection";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -183,6 +184,7 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+    <TripEnquirySection />
     </main>
   );
 }
