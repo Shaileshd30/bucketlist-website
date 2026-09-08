@@ -1,3 +1,4 @@
+import TripFinderWidget from "./components/TripFinderWidget";
 import { serializeJsonLd } from "@/lib/json-ld";
 
 import type { Metadata } from "next";
@@ -258,6 +259,7 @@ export default function RootLayout({
 
         {children}
 <WhatsAppWidget />
+      <TripFinderWidget />
       </body>
     </html>
   );
