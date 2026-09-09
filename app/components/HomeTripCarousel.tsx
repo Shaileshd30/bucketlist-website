@@ -87,7 +87,7 @@ function TripCard({ card, duplicate }: { card: Card; duplicate: boolean }) {
               {batch ? money(Number(batch.price)) : "On request"}
             </p>
             <span className="mt-3 flex items-center justify-between border-t border-black/10 pt-3 text-xs font-bold">
-              {batch ? "View Trip" : "Enquire Now"}
+              View Trip
               <span
                 aria-hidden="true"
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-[#17251d] text-white transition group-hover:bg-orange-500"

@@ -116,8 +116,11 @@ export function TripPageClient({ trip }: { trip: TripData }) {
       return [];
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const today = ["year", "month", "day"]
+      .map((key) => parts.find((part) => part.type === key)?.value).join("-");
 
     return [...trip.batches]
       .filter(
@@ -126,7 +129,8 @@ export function TripPageClient({ trip }: { trip: TripData }) {
           batch.status === "OPEN" &&
           batch.bookingEnabled &&
           batch.totalSeats - (batch.bookedSeats || 0) > 0 &&
-          new Date(batch.departureDate).getTime() >= today.getTime()
+          Number.isFinite(Number(batch.price)) && Number(batch.price) > 0 &&
+          batch.departureDate.slice(0, 10) >= today
       )
       .sort(
         (a, b) =>
@@ -176,6 +180,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      timeZone: "Asia/Kolkata",
     });
   };
 
@@ -188,11 +193,21 @@ export function TripPageClient({ trip }: { trip: TripData }) {
     Number.parseInt(booking.travelers || "1", 10) || 1
   );
 
-  const currentPrice =
-    displayBatch?.price ??
-    (trip.price
-      ? Number(trip.price.replace(/[^0-9]/g, "")) || 0
-      : 0);
+  const currentPrice = displayBatch?.price ?? 0;
+
+
+  const tripUrl = `https://bucketlistadventure.in/trips/${encodeURIComponent(trip.slug)}`;
+  const enquiryUrl = `https://wa.me/918482846287?text=${encodeURIComponent(
+    [
+      `Hi Bucketlist Adventure, I'm interested in ${trip.title}.`,
+      `Trip: ${tripUrl}`,
+      selectedBatch
+        ? `Departure: ${formatDate(selectedBatch.departureDate)}`
+        : "Dates on request: please suggest dates and share a current quote.",
+      `Travellers: ${travelerCount}`,
+      "Please share the details and next steps.",
+    ].join("\n")
+  )}`;
 
   const totalAmount = currentPrice * travelerCount;
 
@@ -302,6 +317,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
       `Hi Bucketlist Adventure,`,
       ``,
       `I am interested in ${trip.title}.`,
+      `Trip: ${tripUrl}`,
       ``,
       selectedBatch
         ? `Departure: ${selectedDate}`
@@ -695,7 +711,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
           label: "NEXT DEPARTURE",
           value: displayBatch
             ? formatDate(displayBatch.departureDate)
-            : "On request",
+            : "Dates on request",
         },
         {
           label: "TRIP TYPE",
@@ -1178,7 +1194,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   <p className="mt-2 font-semibold">
                     {currentPrice
                       ? formatPrice(currentPrice)
-                      : trip.price || "On request"}
+                      : "Price on request"}
                   </p>
                 </div>
 
@@ -1200,7 +1216,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   <p className="mt-2 font-semibold">
                     {displayBatch
                       ? formatDate(displayBatch.departureDate)
-                      : "On request"}
+                      : "Dates on request"}
                   </p>
                 </div>
 
@@ -1226,13 +1242,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                 </button>
 
                 <a
-                  href={`https://wa.me/918482846287?text=${encodeURIComponent(
-                    `Hi Bucketlist Adventure, I'm interested in ${trip.title
-                    }${selectedBatch
-                      ? ` for ${formatDate(selectedBatch.departureDate)}`
-                      : ""
-                    }. We are ${travelerCount} traveler(s). Please share the details.`
-                  )}`}
+                  href={enquiryUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center rounded-full border border-[#17251d]/15 bg-white px-6 py-4 text-sm font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
@@ -1813,7 +1823,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
               <h3 className="text-4xl font-bold">
                 {currentPrice
                   ? formatPrice(currentPrice)
-                  : trip.price || "On request"}
+                  : "Price on request"}
               </h3>
 
               <p className="mt-2 text-sm text-white/60">
@@ -1877,8 +1887,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                 </div>
               ) : (
                 <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm text-white/70">
-                  No public departures are currently available.
-                  Contact us for upcoming dates.
+                  Dates on request. Contact us on WhatsApp to discuss dates and receive a current quote.
                 </div>
               )}
 
@@ -1952,15 +1961,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
 
               {/* WHATSAPP */}
               <a
-                href={`https://wa.me/918482846287?text=${encodeURIComponent(
-                  `Hi Bucketlist Adventure, I'm interested in ${trip.title
-                  }${selectedBatch
-                    ? ` for ${formatDate(
-                      selectedBatch.departureDate
-                    )}`
-                    : ""
-                  }. We are ${travelerCount} traveler(s). Please share the details.`
-                )}`}
+                href={enquiryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/20 bg-white/5 px-5 py-4 text-sm font-semibold text-white transition hover:bg-white hover:text-[#17251d]"
@@ -1992,7 +1993,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
                   <span className="font-semibold text-white">
                     {displayAvailableSeats !== null
                       ? `${displayAvailableSeats} available`
-                      : trip.seats || "On request"}
+                      : "On request"}
                   </span>
                 </div>
 
@@ -2190,9 +2191,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
               </p>
 
               <a
-                href={`https://wa.me/918482846287?text=${encodeURIComponent(
-                  `Hi Bucketlist Adventure, I have a question about ${trip.title}.`
-                )}`}
+                href={enquiryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex w-fit items-center rounded-full bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-400"
@@ -2303,7 +2302,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
             <p className="truncate text-base font-bold leading-5 text-[#17251d]">
               {currentPrice
                 ? formatPrice(currentPrice)
-                : trip.price || "On request"}
+                : "Price on request"}
             </p>
             {displayBatch && (
               <p className="mt-0.5 truncate text-[9px] text-[#5d6862]">
@@ -2313,12 +2312,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
           </div>
 
           <a
-            href={`https://wa.me/918482846287?text=${encodeURIComponent(
-              `Hi Bucketlist Adventure, I'm interested in ${trip.title}${selectedBatch
-                ? ` for ${formatDate(selectedBatch.departureDate)}`
-                : ""
-              }. We are ${travelerCount} traveler(s). Please share the details.`
-            )}`}
+            href={enquiryUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#17251d]/15 bg-white px-2 text-xs font-bold text-[#17251d] transition active:scale-[0.98]"
@@ -2332,7 +2326,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
             disabled={!selectedBatch || !isEnoughSeats}
             className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-orange-500 px-2 text-xs font-bold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#17251d]/20 disabled:text-[#17251d]/45 disabled:shadow-none"
           >
-            {selectedBatch ? "Book Now" : "Dates Soon"}
+            {selectedBatch ? "Book Now" : "Dates on request"}
           </button>
         </div>
       </div>
