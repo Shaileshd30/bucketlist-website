@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { TripBatch, TripData } from "../data/trips";
 
-type Props = { trips: TripData[] | null; loadFailed: boolean };
-type Card = { trip: TripData; batch: TripBatch | null; departures: number };
+type CarouselTrip = TripData & { stayPlan?: string };
+type Props = { trips: CarouselTrip[] | null; loadFailed: boolean };
+type Card = { trip: CarouselTrip; batch: TripBatch | null; departures: number };
 type Direction = "left" | "right";
 
 const money = (value: number) =>
@@ -37,67 +38,166 @@ function displayDate(value: string) {
 
 function TripCard({ card, duplicate }: { card: Card; duplicate: boolean }) {
   const { trip, batch, departures } = card;
+  const photos = Array.from(
+    new Set(
+      [trip.image, ...(trip.gallery || [])].filter(
+        (photo): photo is string => Boolean(photo)
+      )
+    )
+  ).slice(0, 6);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const seats = batch
     ? Number(batch.totalSeats) - Number(batch.bookedSeats)
     : 0;
+  const destination = trip.destination || trip.startPoint || "Adventure travel";
+  const enquiryUrl = `https://wa.me/919225531257?text=${encodeURIComponent(
+    `Hi Bucketlist Adventure! I am interested in ${trip.title}. Please share the available dates, price and booking details.`
+  )}`;
+
   return (
     <li
       aria-hidden={duplicate || undefined}
-      className={`w-[82vw] max-w-[340px] shrink-0 sm:w-[330px] ${duplicate ? "motion-reduce:hidden" : ""}`}
+      className={`w-[84vw] max-w-[370px] shrink-0 sm:w-[350px] lg:w-[360px] ${duplicate ? "motion-reduce:hidden" : ""}`}
     >
-      <Link
-        href={`/trips/${trip.slug}`}
-        tabIndex={duplicate ? -1 : undefined}
-        className="group grid h-full min-h-[190px] grid-cols-[42%_58%] overflow-hidden rounded-[24px] border border-black/10 bg-white shadow-[0_10px_25px_rgba(23,37,29,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(23,37,29,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 motion-reduce:transform-none"
-      >
-        <div className="relative min-h-[190px] overflow-hidden bg-[#dfe5dd]">
-          {trip.image && (
+      <article className="group flex h-full min-h-[500px] flex-col overflow-hidden rounded-[26px] border border-black/10 bg-white shadow-[0_12px_30px_rgba(23,37,29,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_42px_rgba(23,37,29,0.14)] motion-reduce:transform-none">
+        <div className="group/media relative h-[240px] shrink-0 overflow-hidden bg-[#dfe5dd]">
+          <Link
+            href={`/trips/${trip.slug}`}
+            tabIndex={duplicate ? -1 : undefined}
+            className="absolute inset-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-orange-500"
+            aria-label={`View ${trip.title}`}
+          >
+          {photos[photoIndex] && (
             <Image
-              src={trip.image}
-              alt={trip.title}
+              src={photos[photoIndex]}
+              alt={`${trip.title}${photos.length > 1 ? ` — photo ${photoIndex + 1}` : ""}`}
               fill
               unoptimized
-              sizes="(max-width: 640px) 35vw, 140px"
-              className="object-cover transition duration-500 motion-safe:group-hover:scale-105"
+              sizes="(max-width: 640px) 84vw, 370px"
+              className="object-cover transition duration-700 motion-safe:group-hover:scale-[1.04]"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-          <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" />
+          </Link>
+          <span className={`absolute left-0 top-4 px-3.5 py-2 text-xs font-bold tracking-wide text-white shadow-sm ${batch ? "bg-orange-600" : "bg-[#17251d]"}`}>
+            {batch ? `Next · ${displayDate(batch.departureDate)}` : "Dates on request"}
+          </span>
+          <span className="absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-[#17251d] shadow-sm backdrop-blur-sm">
             {trip.duration ||
               (trip.durationDays ? `${trip.durationDays} days` : "View itinerary")}
           </span>
-        </div>
-        <div className="flex min-w-0 flex-col p-4">
-          <h3 className="line-clamp-2 text-base font-bold leading-snug">{trip.title}</h3>
-          <p className="mt-2 text-xs text-[#5d6862]">
-            {batch ? displayDate(batch.departureDate) : "Dates on request"}
-          </p>
-          <p className="mt-1 text-[11px] text-[#5d6862]">
-            {!batch
-              ? "Ask us for the next available date"
-              : departures > 1
-              ? `+${departures - 1} more departure${departures > 2 ? "s" : ""}`
-              : `${seats} seat${seats === 1 ? "" : "s"} available`}
-          </p>
-          <div className="mt-auto pt-4">
-            <p className="text-[10px] text-[#5d6862]">
-              {batch ? "Per person" : "Availability"}
-            </p>
-            <p className="text-xl font-bold">
-              {batch ? money(Number(batch.price)) : "On request"}
-            </p>
-            <span className="mt-3 flex items-center justify-between border-t border-black/10 pt-3 text-xs font-bold">
-              View Trip
-              <span
-                aria-hidden="true"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-[#17251d] text-white transition group-hover:bg-orange-500"
-              >
-                ↗
-              </span>
+          {departures > 1 && (
+            <span className="absolute bottom-4 right-4 rounded-full bg-[#17251d]/90 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+              {departures} departures
             </span>
+          )}
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPhotoIndex((current) => (current - 1 + photos.length) % photos.length)}
+                tabIndex={duplicate ? -1 : undefined}
+                aria-label={`Previous photo of ${trip.title}`}
+                className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[#17251d] opacity-100 shadow-md backdrop-blur-sm transition hover:bg-white focus-visible:outline-2 focus-visible:outline-orange-500 sm:opacity-0 sm:group-hover/media:opacity-100 sm:group-focus-within/media:opacity-100"
+              >
+                <span aria-hidden="true">←</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoIndex((current) => (current + 1) % photos.length)}
+                tabIndex={duplicate ? -1 : undefined}
+                aria-label={`Next photo of ${trip.title}`}
+                className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[#17251d] opacity-100 shadow-md backdrop-blur-sm transition hover:bg-white focus-visible:outline-2 focus-visible:outline-orange-500 sm:opacity-0 sm:group-hover/media:opacity-100 sm:group-focus-within/media:opacity-100"
+              >
+                <span aria-hidden="true">→</span>
+              </button>
+              <span className="absolute right-4 top-4 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                {photoIndex + 1} / {photos.length}
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col px-5 pb-5 pt-5">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600">
+            {destination}
+          </p>
+
+          <Link
+            href={`/trips/${trip.slug}`}
+            tabIndex={duplicate ? -1 : undefined}
+            className="mt-2 line-clamp-2 text-xl font-bold leading-snug tracking-tight text-[#17251d] decoration-orange-500 decoration-2 underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-orange-500"
+          >
+            {trip.title}
+          </Link>
+
+          {(trip.durationDays || 0) > 1 && (
+            <p
+              title={trip.stayPlan || "View day-wise itinerary"}
+              className="mt-3 min-h-[52px] overflow-hidden rounded-lg bg-[#f5f3ee] px-3 py-2 text-[13px] font-semibold leading-[18px] text-[#34483d]"
+              style={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+              }}
+            >
+              {trip.stayPlan || "View day-wise itinerary"}
+            </p>
+          )}
+
+          <div className="mt-4 flex min-h-10 items-start gap-2 border-b border-black/10 pb-4 text-sm leading-5 text-[#5d6862]">
+            <span aria-hidden="true" className="mt-0.5 text-[#17251d]">●</span>
+            <p>
+              {!batch
+                ? "Tell us your preferred dates for a custom quote."
+                : `${seats} seat${seats === 1 ? "" : "s"} currently available${departures > 1 ? ` across ${departures} departures` : ""}.`}
+            </p>
+          </div>
+
+          <div className="mt-auto flex items-end justify-between gap-4 pt-5">
+            <div>
+              <p className="text-xs font-medium text-[#5d6862]">
+                {batch ? "From / person" : "Availability"}
+              </p>
+              <p className="mt-1 text-2xl font-bold tracking-tight text-[#17251d]">
+                {batch ? money(Number(batch.price)) : "On request"}
+              </p>
+            </div>
+
+            {batch && (
+              <p className="max-w-[110px] text-right text-xs leading-4 text-[#5d6862]">
+                Final price shown on trip page
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 grid grid-cols-[1fr_auto] gap-2.5">
+            <Link
+              href={`/trips/${trip.slug}`}
+              tabIndex={duplicate ? -1 : undefined}
+              className="flex min-h-12 items-center justify-center rounded-xl bg-[#17251d] px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
+            >
+              View trip <span className="ml-2" aria-hidden="true">↗</span>
+            </Link>
+            <a
+              href={enquiryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={duplicate ? -1 : undefined}
+              aria-label={`Enquire about ${trip.title} on WhatsApp`}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#17251d]/20 bg-[#f5f3ee] text-lg font-bold text-[#17251d] transition hover:border-[#25D366] hover:bg-[#25D366] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-[22px] w-[22px] fill-current"
+              >
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.009-.371-.011-.57-.011-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479s1.065 2.875 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.871.118.57-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.002-5.45 4.436-9.884 9.892-9.884a9.82 9.82 0 0 1 7.021 2.91 9.83 9.83 0 0 1 2.898 7.021c-.003 5.45-4.445 9.884-9.927 9.884m8.413-18.297A11.82 11.82 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.304-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413Z" />
+              </svg>
+            </a>
           </div>
         </div>
-      </Link>
+      </article>
     </li>
   );
 }

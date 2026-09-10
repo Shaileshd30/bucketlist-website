@@ -182,6 +182,39 @@ function safePublicImage(value: string | null | undefined) {
   return image;
 }
 
+function buildStayPlan(itinerary: TripData["itinerary"] | null) {
+  const dayItems = (itinerary || []).filter(
+    (item): item is Extract<TripData["itinerary"][number], { day: string }> =>
+      typeof item === "object" && item !== null && "day" in item
+  );
+
+  if (dayItems.length < 2) return undefined;
+
+  const overnightDays = dayItems.slice(0, -1);
+  const places = overnightDays.map((item) => item.location?.trim() || "");
+
+  // A partial route could assign nights to the wrong destination, so only show
+  // the summary when every overnight day has a saved location.
+  if (!places.length || places.some((place) => !place)) return undefined;
+
+  const stays: { place: string; nights: number }[] = [];
+
+  for (const place of places) {
+    const previous = stays.at(-1);
+    if (previous?.place.toLocaleLowerCase("en-IN") === place.toLocaleLowerCase("en-IN")) {
+      previous.nights += 1;
+    } else {
+      stays.push({ place, nights: 1 });
+    }
+  }
+
+  const labels = stays.map(({ place, nights }) => `${nights}N ${place}`);
+
+  if (labels.length <= 3) return labels.join(" • ");
+
+  return `${labels.slice(0, 3).join(" • ")} • +${labels.length - 3} more`;
+}
+
 function sanitizeGallery(values: string[] | null | undefined) {
   return (values || [])
     .map((value) => (value || "").trim())
@@ -261,7 +294,7 @@ export async function GET(request: Request) {
         supabaseAdmin
           .from("trips")
           .select(
-            "id,slug,title,trip_type,category,travel_category,destination,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,featured,upcoming"
+            "id,slug,title,trip_type,category,travel_category,destination,highlight,subtitle,summary,cta,difficulty,start_point,duration_days,group_size,image,gallery,itinerary,featured,upcoming"
           )
           .eq("archived", false)
           .order("created_at", {
@@ -316,6 +349,8 @@ export async function GET(request: Request) {
         image:
           safePublicImage(row.image) ||
           "/images/about/about-expedition.jpg",
+        gallery: sanitizeGallery(row.gallery),
+        stayPlan: buildStayPlan(row.itinerary),
         featured: row.featured || false,
         upcoming: row.upcoming || false,
         batches: batchesByTrip.get(row.id) || [],
