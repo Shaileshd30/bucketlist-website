@@ -92,7 +92,7 @@ export default function AdminPage() {
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [siteSynced, setSiteSynced] = useState(true);
   const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS" | "CUSTOM_BOOKINGS">("TRIPS");
-  const [newTripSlugs, setNewTripSlugs] = useState<string[]>([]);
+  const [, setNewTripSlugs] = useState<string[]>([]);
   const [isDeletingTrip, setIsDeletingTrip] = useState(false);
   const [itineraryFormatOverrides, setItineraryFormatOverrides] = useState<Record<string, ItineraryFormat>>({});
 

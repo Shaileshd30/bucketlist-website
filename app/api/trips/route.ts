@@ -194,6 +194,17 @@ export async function GET(request: Request) {
     const slug = url.searchParams.get("slug")?.trim() || "";
     const summaryOnly = url.searchParams.get("summary") === "1";
 
+    // Public pages may request a single active trip or the deliberately
+    // limited homepage summary. The complete catalogue is an admin tool and
+    // must not be exposed as a public JSON endpoint.
+    if (!slug && !summaryOnly) {
+      const authError = await requireAdmin();
+
+      if (authError) {
+        return authError;
+      }
+    }
+
     if (slug) {
       const tripResult = await supabaseAdmin
         .from("trips")
