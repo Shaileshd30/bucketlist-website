@@ -28,7 +28,7 @@ type PaymentLinkWebhookPayload = {
 };
 
 type CustomBookingLookupRow = {
-  id: string;
+  custom_booking_id: string;
 };
 
 export async function
@@ -104,8 +104,8 @@ processCustomBookingPaymentLinkWebhook(
     data,
     error: lookupError,
   } = await supabaseAdmin
-    .from("custom_bookings")
-    .select("id")
+    .from("custom_booking_installments")
+    .select("custom_booking_id")
     .eq(
       "razorpay_payment_link_id",
       paymentLink.id
@@ -145,7 +145,7 @@ processCustomBookingPaymentLinkWebhook(
     "confirm_custom_booking_payment",
     {
       p_custom_booking_id:
-        booking.id,
+        booking.custom_booking_id,
 
       p_provider_payment_link_id:
         paymentLink.id,

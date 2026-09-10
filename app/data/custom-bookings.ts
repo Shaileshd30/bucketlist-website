@@ -15,6 +15,37 @@ export type CustomPaymentStatus =
   | "REFUNDED"
   | "PARTIALLY_REFUNDED";
 
+export type CustomInstallmentStatus =
+  | "PENDING"
+  | "LINK_CREATED"
+  | "PAID"
+  | "FAILED"
+  | "CANCELLED";
+
+export type CustomBookingInstallment = {
+  id: string;
+  installmentNumber: number;
+  label: string;
+  amount: number;
+  dueDate?: string;
+  paidAmount: number;
+  status: CustomInstallmentStatus;
+  razorpayPaymentLinkId?: string;
+  razorpayPaymentLinkUrl?: string;
+  paymentLinkExpiresAt?: string;
+  paidAt?: string;
+};
+
+export type CustomBookingPayment = {
+  id: number;
+  installmentId?: string;
+  providerPaymentId: string;
+  amount: number;
+  currency: string;
+  status: "CAPTURED" | "REFUNDED" | "PARTIALLY_REFUNDED";
+  createdAt: string;
+};
+
 export type CustomBooking = {
   id: string;
   bookingReference: string;
@@ -36,6 +67,7 @@ export type CustomBooking = {
   razorpayPaymentLinkUrl?: string;
   paymentLinkExpiresAt?: string;
   notes?: string;
+  installments: CustomBookingInstallment[];
   createdAt: string;
   updatedAt: string;
 };
@@ -52,4 +84,9 @@ export type CreateCustomBookingInput = {
   advanceAmount: number;
   balanceDueDate?: string;
   notes?: string;
+  installments?: Array<{
+    label: string;
+    amount: number;
+    dueDate?: string;
+  }>;
 };

@@ -10,7 +10,14 @@ import {
 import type {
   CreateCustomBookingInput,
   CustomBooking,
+  CustomBookingInstallment,
 } from "@/app/data/custom-bookings";
+
+type InstallmentForm = {
+  label: string;
+  amount: string;
+  dueDate: string;
+};
 
 type FormState = {
   packageName: string;
@@ -21,8 +28,7 @@ type FormState = {
   travelEndDate: string;
   travelers: string;
   totalAmount: string;
-  advanceAmount: string;
-  balanceDueDate: string;
+  installments: InstallmentForm[];
   notes: string;
 };
 
@@ -35,8 +41,10 @@ const initialForm: FormState = {
   travelEndDate: "",
   travelers: "1",
   totalAmount: "",
-  advanceAmount: "",
-  balanceDueDate: "",
+  installments: [
+    { label: "Installment 1", amount: "", dueDate: "" },
+    { label: "Installment 2", amount: "", dueDate: "" },
+  ],
   notes: "",
 };
 
@@ -253,6 +261,73 @@ export default function CustomBookingManager() {
     setMessage(null);
   };
 
+  const updateInstallment = (
+    index: number,
+    field: keyof InstallmentForm,
+    value: string
+  ) => {
+    setForm((current) => ({
+      ...current,
+      installments: current.installments.map((installment, itemIndex) =>
+        itemIndex === index ? { ...installment, [field]: value } : installment
+      ),
+    }));
+    setMessage(null);
+  };
+
+  const splitInstallmentsEqually = () => {
+    const total = Number(form.totalAmount);
+    const count = form.installments.length;
+
+    if (!Number.isFinite(total) || total <= 0 || count === 0) {
+      setMessage({ type: "error", text: "Enter the package total before splitting installments." });
+      return;
+    }
+
+    const base = Math.floor((total * 100) / count);
+    let assigned = 0;
+
+    setForm((current) => ({
+      ...current,
+      installments: current.installments.map((installment, index) => {
+        const paise = index === count - 1 ? Math.round(total * 100) - assigned : base;
+        assigned += paise;
+        return { ...installment, amount: String(paise / 100) };
+      }),
+    }));
+    setMessage(null);
+  };
+
+  const addInstallment = () => {
+    setForm((current) => {
+      if (current.installments.length >= 10) return current;
+      const number = current.installments.length + 1;
+      return {
+        ...current,
+        installments: [
+          ...current.installments,
+          { label: `Installment ${number}`, amount: "", dueDate: "" },
+        ],
+      };
+    });
+    setMessage(null);
+  };
+
+  const removeInstallment = (index: number) => {
+    setForm((current) => ({
+      ...current,
+      installments: current.installments
+        .filter((_, itemIndex) => itemIndex !== index)
+        .map((installment, itemIndex) => ({
+          ...installment,
+          label: /^Installment \d+$/.test(installment.label)
+            ? `Installment ${itemIndex + 1}`
+            : installment.label,
+        })),
+    }));
+    setMessage(null);
+  };
+
   const createBooking =
     async (
       event: FormEvent<HTMLFormElement>
@@ -285,9 +360,13 @@ export default function CustomBookingManager() {
             ),
 
           advanceAmount:
-            Number(
-              form.advanceAmount
-            ),
+            Number(form.installments[0]?.amount),
+
+          installments: form.installments.map((installment) => ({
+            label: installment.label.trim(),
+            amount: Number(installment.amount),
+            ...(installment.dueDate ? { dueDate: installment.dueDate } : {}),
+          })),
 
           ...(form.travelStartDate
             ? {
@@ -303,10 +382,10 @@ export default function CustomBookingManager() {
               }
             : {}),
 
-          ...(form.balanceDueDate
+          ...(form.installments.at(-1)?.dueDate
             ? {
                 balanceDueDate:
-                  form.balanceDueDate,
+                  form.installments.at(-1)!.dueDate,
               }
             : {}),
 
@@ -371,10 +450,11 @@ export default function CustomBookingManager() {
 
   const generatePaymentLink =
     async (
-      booking: CustomBooking
+      booking: CustomBooking,
+      installment: CustomBookingInstallment
     ) => {
       setGeneratingFor(
-        booking.id
+        installment.id
       );
 
       setMessage(null);
@@ -385,6 +465,8 @@ export default function CustomBookingManager() {
             `/api/custom-bookings/${booking.id}/payment-link`,
             {
               method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ installmentId: installment.id }),
             }
           );
 
@@ -452,10 +534,11 @@ export default function CustomBookingManager() {
     };
 
   const shareOnWhatsApp = (
-    booking: CustomBooking
+    booking: CustomBooking,
+    installment: CustomBookingInstallment
   ) => {
     if (
-      !booking.razorpayPaymentLinkUrl
+      !installment.razorpayPaymentLinkUrl
     ) {
       return;
     }
@@ -469,12 +552,12 @@ export default function CustomBookingManager() {
     const messageText = [
       `Hello ${booking.customerName},`,
       "",
-      `Your advance payment link for ${booking.packageName} is ready.`,
+      `Your ${installment.label.toLowerCase()} payment link for ${booking.packageName} is ready.`,
       "",
       `Booking reference: ${booking.bookingReference}`,
-      `Advance amount: ${formatCurrency(booking.advanceAmount)}`,
+      `Amount: ${formatCurrency(installment.amount - installment.paidAmount)}`,
       "",
-      booking.razorpayPaymentLinkUrl,
+      installment.razorpayPaymentLinkUrl,
       "",
       "Bucketlist Adventure",
       "We Plan It. You Live It.",
@@ -712,61 +795,83 @@ export default function CustomBookingManager() {
             />
           </label>
 
-          <label className="space-y-2 text-sm font-medium text-[#17251d]">
-            <span>
-              Advance amount
-            </span>
+          <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 md:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-[#17251d]">Payment schedule</h3>
+                <p className="mt-1 text-sm text-[#66736c]">
+                  Two installments are added by default. Their total must match the package amount.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={splitInstallmentsEqually}
+                  className="rounded-full border border-[#17251d]/15 bg-white px-4 py-2 text-xs font-semibold text-[#17251d] hover:bg-[#17251d] hover:text-white"
+                >
+                  Split equally
+                </button>
+                <button
+                  type="button"
+                  onClick={addInstallment}
+                  disabled={form.installments.length >= 10}
+                  className="rounded-full bg-[#17251d] px-4 py-2 text-xs font-semibold text-white hover:bg-orange-500 disabled:opacity-50"
+                >
+                  Add installment
+                </button>
+              </div>
+            </div>
 
-            <input
-              required
-              type="number"
-              min="1"
-              step="1"
-              max={
-                form.totalAmount ||
-                undefined
-              }
-              value={
-                form.advanceAmount
-              }
-              onChange={(
-                event
-              ) =>
-                updateField(
-                  "advanceAmount",
-                  event.target.value
-                )
-              }
-              placeholder="₹"
-              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-            />
-          </label>
-
-          <label className="space-y-2 text-sm font-medium text-[#17251d]">
-            <span>
-              Balance due date
-            </span>
-
-            <input
-              type="date"
-              max={
-                form.travelStartDate ||
-                undefined
-              }
-              value={
-                form.balanceDueDate
-              }
-              onChange={(
-                event
-              ) =>
-                updateField(
-                  "balanceDueDate",
-                  event.target.value
-                )
-              }
-              className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
-            />
-          </label>
+            <div className="mt-5 space-y-3">
+              {form.installments.map((installment, index) => (
+                <div
+                  key={index}
+                  className="grid gap-3 rounded-xl border border-black/10 bg-white p-4 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end"
+                >
+                  <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                    <span>Label</span>
+                    <input
+                      required
+                      value={installment.label}
+                      onChange={(event) => updateInstallment(index, "label", event.target.value)}
+                      className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none focus:border-orange-400"
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                    <span>Amount</span>
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      value={installment.amount}
+                      onChange={(event) => updateInstallment(index, "amount", event.target.value)}
+                      placeholder="₹"
+                      className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none focus:border-orange-400"
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm font-medium text-[#17251d]">
+                    <span>Due date</span>
+                    <input
+                      type="date"
+                      max={form.travelStartDate || undefined}
+                      value={installment.dueDate}
+                      onChange={(event) => updateInstallment(index, "dueDate", event.target.value)}
+                      className="w-full rounded-xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none focus:border-orange-400"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeInstallment(index)}
+                    disabled={form.installments.length === 1}
+                    className="min-h-12 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <label className="space-y-2 text-sm font-medium text-[#17251d] md:col-span-2">
             <span>
@@ -920,64 +1025,89 @@ export default function CustomBookingManager() {
 
                     <div>
                       <p className="text-xs text-[#77837c]">
-                        Advance
+                        Paid
                       </p>
 
                       <p className="mt-1 font-semibold text-[#17251d]">
                         {formatCurrency(
-                          booking.advanceAmount
+                          booking.amountPaid
                         )}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    {!booking.razorpayPaymentLinkUrl ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void generatePaymentLink(
-                            booking
-                          )
-                        }
-                        disabled={
-                          generatingFor ===
-                          booking.id
-                        }
-                        className="rounded-full bg-[#17251d] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-500 disabled:opacity-60"
+                  <div className="mt-5">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <h4 className="font-semibold text-[#17251d]">Installments</h4>
+                      <a
+                        href={`/api/custom-bookings/${booking.id}/voucher`}
+                        className="rounded-full border border-[#17251d]/15 px-4 py-2 text-xs font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
                       >
-                        {generatingFor ===
-                        booking.id
-                          ? "Generating..."
-                          : "Generate payment link"}
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void copyPaymentLink(
-                              booking.razorpayPaymentLinkUrl!
-                            )
-                          }
-                          className="rounded-full border border-[#17251d]/15 px-5 py-2.5 text-xs font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
-                        >
-                          Copy payment link
-                        </button>
+                        Download booking voucher
+                      </a>
+                    </div>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            shareOnWhatsApp(
-                              booking
-                            )
-                          }
-                          className="rounded-full bg-[#25D366] px-5 py-2.5 text-xs font-semibold text-white transition hover:brightness-95"
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      {booking.installments.map((installment) => (
+                        <div
+                          key={installment.id}
+                          className="rounded-2xl border border-black/10 bg-[#fffdf8] p-4"
                         >
-                          Share on WhatsApp
-                        </button>
-                      </>
-                    )}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-[#17251d]">{installment.label}</p>
+                              <p className="mt-1 text-lg font-bold text-[#17251d]">
+                                {formatCurrency(installment.amount)}
+                              </p>
+                              <p className="mt-1 text-xs text-[#66736c]">
+                                Due {formatDate(installment.dueDate)}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+                                installment.status === "PAID"
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-orange-50 text-orange-700"
+                              }`}
+                            >
+                              {installment.status}
+                            </span>
+                          </div>
+
+                          {installment.status !== "PAID" && installment.status !== "CANCELLED" ? (
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {!installment.razorpayPaymentLinkUrl ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void generatePaymentLink(booking, installment)}
+                                  disabled={generatingFor === installment.id}
+                                  className="rounded-full bg-[#17251d] px-4 py-2 text-xs font-semibold text-white hover:bg-orange-500 disabled:opacity-60"
+                                >
+                                  {generatingFor === installment.id ? "Generating..." : "Generate payment link"}
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => void copyPaymentLink(installment.razorpayPaymentLinkUrl!)}
+                                    className="rounded-full border border-[#17251d]/15 px-4 py-2 text-xs font-semibold text-[#17251d] hover:bg-[#17251d] hover:text-white"
+                                  >
+                                    Copy link
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => shareOnWhatsApp(booking, installment)}
+                                    className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-semibold text-white hover:brightness-95"
+                                  >
+                                    Share on WhatsApp
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </article>
               )

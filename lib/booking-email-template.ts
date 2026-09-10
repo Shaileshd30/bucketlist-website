@@ -218,7 +218,7 @@ export function renderBookingEmail(
     ? "This email acknowledges your payment; it does not confirm availability."
     : booking.balanceAmount === 0
       ? "Your booking is paid in full."
-      : "Your advance has been received. The remaining balance is shown above.";
+      : "Your payment has been received. The remaining balance and next due date are shown above.";
 
   const subject = `${heading} | ${booking.bookingReference}`
     .replace(/[\r\n]/g, " ");
@@ -286,7 +286,7 @@ export function renderBookingEmail(
                 <tbody>${tableRows}</tbody>
               </table>
               <p style="margin-top:24px;">${escapeHtml(paymentNote)}</p>
-              <<p>Questions? Reply to this email or contact us below.</p>
+              <p>Questions? Reply to this email or contact us below.</p>
 
 <p style="margin:20px 0 12px;line-height:1.8;">
   <strong>Bucketlist Adventure</strong><br>
@@ -315,11 +315,6 @@ export function renderBookingEmail(
   <a href="https://bucketlistadventure.in"
      style="color:#17251d;">Visit our website</a>
 </p>
-              <p style="margin-bottom:0;">
-                <strong>Bucketlist Adventure</strong><br>
-                We Plan It. You Live It.<br>
-                <a href="https://bucketlistadventure.in" style="color:#17251d;">Visit our website</a>
-              </p>
             </td>
           </tr>
         </table>

@@ -13,9 +13,21 @@ type CustomBookingRow = {
     phone: string;
     email: string | null;
     advance_amount: number | string;
+    total_amount: number | string;
     amount_paid: number | string;
     booking_status: string;
     payment_status: string;
+    razorpay_payment_link_id: string | null;
+    razorpay_payment_link_url: string | null;
+};
+
+type CustomInstallmentRow = {
+    id: string;
+    installment_number: number;
+    label: string;
+    amount: number | string;
+    paid_amount: number | string;
+    status: string;
     razorpay_payment_link_id: string | null;
     razorpay_payment_link_url: string | null;
 };
@@ -27,7 +39,7 @@ type RazorpayPaymentLinkResult = {
 };
 
 export async function POST(
-    _request: Request,
+    request: Request,
     context: {
         params: Promise<{
             id: string;
@@ -61,6 +73,22 @@ export async function POST(
             );
         }
 
+        let requestedInstallmentId = "";
+
+        try {
+            const raw = await request.text();
+            if (raw) {
+                const body = JSON.parse(raw) as { installmentId?: unknown };
+                if (typeof body.installmentId !== "string") throw new Error();
+                requestedInstallmentId = body.installmentId.trim();
+            }
+        } catch {
+            return Response.json(
+                { error: "A valid installment is required." },
+                { status: 400, headers: { "Cache-Control": "no-store" } }
+            );
+        }
+
         const {
             data,
             error: bookingError,
@@ -75,6 +103,7 @@ export async function POST(
           phone,
           email,
           advance_amount,
+          total_amount,
           amount_paid,
           booking_status,
           payment_status,
@@ -125,32 +154,52 @@ export async function POST(
             );
         }
 
-        /*
-         * Reuse the stored link. This prevents an
-         * accidental double-click from creating
-         * multiple payment links for one booking.
-         */
-        if (
-            booking.razorpay_payment_link_id &&
-            booking.razorpay_payment_link_url
-        ) {
+        const { data: installmentData, error: installmentError } =
+            await supabaseAdmin
+                .from("custom_booking_installments")
+                .select("*")
+                .eq("custom_booking_id", booking.id)
+                .order("installment_number", { ascending: true });
+
+        if (installmentError) throw installmentError;
+
+        const installments = (installmentData || []) as CustomInstallmentRow[];
+        const installment = requestedInstallmentId
+            ? installments.find((item) => item.id === requestedInstallmentId)
+            : installments.find((item) => item.status !== "PAID" && item.status !== "CANCELLED");
+
+        if (!installment) {
             return Response.json(
                 {
-                    paymentLink: {
-                        id:
-                            booking.razorpay_payment_link_id,
-
-                        url:
-                            booking.razorpay_payment_link_url,
-
-                        reused: true,
-                    },
+                    error: "The requested installment is unavailable or already paid.",
                 },
                 {
+                    status: 409,
                     headers: {
                         "Cache-Control": "no-store",
                     },
                 }
+            );
+        }
+
+        if (installment.status === "PAID" || installment.status === "CANCELLED") {
+            return Response.json(
+                { error: "A payment link cannot be created for this installment." },
+                { status: 409, headers: { "Cache-Control": "no-store" } }
+            );
+        }
+
+        if (installment.razorpay_payment_link_id && installment.razorpay_payment_link_url) {
+            return Response.json(
+                {
+                    paymentLink: {
+                        id: installment.razorpay_payment_link_id,
+                        url: installment.razorpay_payment_link_url,
+                        installmentId: installment.id,
+                        reused: true,
+                    },
+                },
+                { headers: { "Cache-Control": "no-store" } }
             );
         }
 
@@ -182,18 +231,8 @@ export async function POST(
             );
         }
 
-        const advanceAmount =
-            Number(
-                booking.advance_amount
-            );
-
-        const amountPaid =
-            Number(
-                booking.amount_paid
-            );
-
         const amountToCollect =
-            advanceAmount - amountPaid;
+            Number(installment.amount) - Number(installment.paid_amount);
 
         if (
             !Number.isFinite(amountToCollect) ||
@@ -202,7 +241,7 @@ export async function POST(
             return Response.json(
                 {
                     error:
-                        "No advance payment is currently due.",
+                        "No payment is currently due for this installment.",
                 },
                 {
                     status: 409,
@@ -232,10 +271,10 @@ export async function POST(
                 accept_partial: false,
 
                 description:
-                    `Advance payment for ${booking.package_name}`,
+                    `${installment.label} for ${booking.package_name}`,
 
                 reference_id:
-                    booking.booking_reference,
+                    `${booking.booking_reference}-I${installment.installment_number}`,
 
                 customer: {
                     name:
@@ -263,11 +302,17 @@ export async function POST(
                     custom_booking_id:
                         booking.id,
 
+                    installment_id:
+                        installment.id,
+
+                    installment_number:
+                        String(installment.installment_number),
+
                     booking_reference:
                         booking.booking_reference,
 
                     payment_purpose:
-                        "CUSTOM_BOOKING_ADVANCE",
+                        "CUSTOM_BOOKING_INSTALLMENT",
                 },
             }) as RazorpayPaymentLinkResult;
 
@@ -280,10 +325,8 @@ export async function POST(
             );
         }
 
-        const {
-            error: updateError,
-        } = await supabaseAdmin
-            .from("custom_bookings")
+        const { error: updateError } = await supabaseAdmin
+            .from("custom_booking_installments")
             .update({
                 razorpay_payment_link_id:
                     paymentLink.id,
@@ -294,16 +337,24 @@ export async function POST(
                 payment_link_expires_at:
                     null,
 
-                booking_status:
-                    "AWAITING_ADVANCE",
-
-                payment_status:
-                    "LINK_CREATED",
             })
-            .eq("id", booking.id);
+            .eq("id", installment.id)
+            .eq("custom_booking_id", booking.id);
 
         if (updateError) {
             throw updateError;
+        }
+
+        if (Number(booking.amount_paid) === 0) {
+            const { error: bookingUpdateError } = await supabaseAdmin
+                .from("custom_bookings")
+                .update({
+                    booking_status: "AWAITING_ADVANCE",
+                    payment_status: "LINK_CREATED",
+                })
+                .eq("id", booking.id);
+
+            if (bookingUpdateError) throw bookingUpdateError;
         }
 
         return Response.json(
@@ -320,6 +371,12 @@ export async function POST(
 
                     amount:
                         amountToCollect,
+
+                    installmentId:
+                        installment.id,
+
+                    installmentNumber:
+                        installment.installment_number,
 
                     currency:
                         "INR",

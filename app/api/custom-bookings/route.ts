@@ -1,7 +1,9 @@
 import type {
   CreateCustomBookingInput,
   CustomBooking,
+  CustomBookingInstallment,
   CustomBookingStatus,
+  CustomInstallmentStatus,
   CustomPaymentStatus,
 } from "@/app/data/custom-bookings";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -35,8 +37,40 @@ type CustomBookingRow = {
   updated_at: string;
 };
 
+type CustomInstallmentRow = {
+  id: string;
+  custom_booking_id: string;
+  installment_number: number;
+  label: string;
+  amount: number | string;
+  due_date: string | null;
+  paid_amount: number | string;
+  status: CustomInstallmentStatus;
+  razorpay_payment_link_id: string | null;
+  razorpay_payment_link_url: string | null;
+  payment_link_expires_at: string | null;
+  paid_at: string | null;
+};
+
+function mapInstallment(row: CustomInstallmentRow): CustomBookingInstallment {
+  return {
+    id: row.id,
+    installmentNumber: row.installment_number,
+    label: row.label,
+    amount: Number(row.amount),
+    dueDate: row.due_date || undefined,
+    paidAmount: Number(row.paid_amount),
+    status: row.status,
+    razorpayPaymentLinkId: row.razorpay_payment_link_id || undefined,
+    razorpayPaymentLinkUrl: row.razorpay_payment_link_url || undefined,
+    paymentLinkExpiresAt: row.payment_link_expires_at || undefined,
+    paidAt: row.paid_at || undefined,
+  };
+}
+
 function mapCustomBooking(
-  row: CustomBookingRow
+  row: CustomBookingRow,
+  installments: CustomBookingInstallment[] = []
 ): CustomBooking {
   return {
     id: row.id,
@@ -75,6 +109,7 @@ function mapCustomBooking(
       row.payment_link_expires_at ||
       undefined,
     notes: row.notes || undefined,
+    installments,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -165,26 +200,40 @@ export async function GET() {
   }
 
   try {
-    const {
-      data,
-      error,
-    } = await supabaseAdmin
-      .from("custom_bookings")
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    const [bookingsResult, installmentsResult] = await Promise.all([
+      supabaseAdmin
+        .from("custom_bookings")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("custom_booking_installments")
+        .select("*")
+        .order("installment_number", { ascending: true }),
+    ]);
 
-    if (error) {
-      throw error;
+    if (bookingsResult.error) {
+      throw bookingsResult.error;
+    }
+
+    if (installmentsResult.error) {
+      throw installmentsResult.error;
+    }
+
+    const installmentRows = (installmentsResult.data || []) as CustomInstallmentRow[];
+    const installmentsByBooking = new Map<string, CustomBookingInstallment[]>();
+
+    for (const row of installmentRows) {
+      const list = installmentsByBooking.get(row.custom_booking_id) || [];
+      list.push(mapInstallment(row));
+      installmentsByBooking.set(row.custom_booking_id, list);
     }
 
     return Response.json(
       {
         bookings:
           (
-            (data || []) as CustomBookingRow[]
-          ).map(mapCustomBooking),
+            (bookingsResult.data || []) as CustomBookingRow[]
+          ).map((row) => mapCustomBooking(row, installmentsByBooking.get(row.id) || [])),
       },
       {
         headers: {
@@ -304,6 +353,10 @@ export async function POST(
   const advanceAmount =
     Number(body.advanceAmount);
 
+  const rawInstallments = Array.isArray(body.installments)
+    ? body.installments
+    : null;
+
   if (
     !packageName ||
     !customerName ||
@@ -324,6 +377,74 @@ export async function POST(
           "Cache-Control": "no-store",
         },
       }
+    );
+  }
+
+  const installmentInputs = rawInstallments?.map((item, index) => ({
+    installmentNumber: index + 1,
+    label: requiredText(item?.label, 1, 80),
+    amount: Number(item?.amount),
+    dueDate: optionalDate(item?.dueDate),
+  })) || [
+    {
+      installmentNumber: 1,
+      label: "Installment 1",
+      amount: advanceAmount,
+      dueDate: null,
+    },
+    ...(totalAmount > advanceAmount
+      ? [{
+          installmentNumber: 2,
+          label: "Installment 2",
+          amount: totalAmount - advanceAmount,
+          dueDate: balanceDueDate,
+        }]
+      : []),
+  ];
+
+  const installmentTotal = installmentInputs.reduce(
+    (sum, item) => sum + item.amount,
+    0
+  );
+
+  if (
+    installmentInputs.length < 1 ||
+    installmentInputs.length > 10 ||
+    installmentInputs.some(
+      (item) =>
+        !item.label ||
+        !Number.isFinite(item.amount) ||
+        item.amount <= 0 ||
+        Math.abs(item.amount * 100 - Math.round(item.amount * 100)) > 1e-6 ||
+        item.dueDate === undefined
+    ) ||
+    Math.round(installmentTotal * 100) !== Math.round(totalAmount * 100)
+  ) {
+    return Response.json(
+      {
+        error:
+          "Add 1-10 valid installments whose amounts equal the package total.",
+      },
+      {
+        status: 400,
+        headers: { "Cache-Control": "no-store" },
+      }
+    );
+  }
+
+  const datedInstallments = installmentInputs
+    .map((item) => item.dueDate)
+    .filter((value): value is string => Boolean(value));
+
+  if (
+    datedInstallments.some(
+      (date, index) => index > 0 && date < datedInstallments[index - 1]
+    ) ||
+    (travelStartDate && datedInstallments.some((date) => date > travelStartDate))
+  ) {
+    return Response.json(
+      { error: "Installment due dates must be ordered and cannot follow the travel start date." },
+      { status: 400, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -444,9 +565,9 @@ export async function POST(
         total_amount:
           totalAmount,
         advance_amount:
-          advanceAmount,
+          installmentInputs[0].amount,
         balance_due_date:
-          balanceDueDate,
+          installmentInputs.at(-1)?.dueDate || balanceDueDate,
         notes,
         booking_status: "DRAFT",
         payment_status: "PENDING",
@@ -458,11 +579,36 @@ export async function POST(
       throw error;
     }
 
+    const bookingRow = data as CustomBookingRow;
+    const { data: installmentData, error: installmentError } =
+      await supabaseAdmin
+        .from("custom_booking_installments")
+        .insert(
+          installmentInputs.map((item) => ({
+            custom_booking_id: bookingRow.id,
+            installment_number: item.installmentNumber,
+            label: item.label,
+            amount: item.amount,
+            due_date: item.dueDate,
+          }))
+        )
+        .select("*");
+
+    if (installmentError) {
+      await supabaseAdmin.from("custom_bookings").delete().eq("id", bookingRow.id);
+      throw installmentError;
+    }
+
+    const installments = ((installmentData || []) as CustomInstallmentRow[])
+      .sort((a, b) => a.installment_number - b.installment_number)
+      .map(mapInstallment);
+
     return Response.json(
       {
         booking:
           mapCustomBooking(
-            data as CustomBookingRow
+            bookingRow,
+            installments
           ),
       },
       {

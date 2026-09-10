@@ -3,6 +3,7 @@ import {
   type BookingEmailKind,
 } from "@/lib/booking-email-template";
 import { createBookingEmailTransport } from "@/lib/booking-email-transport";
+import { createCustomBookingVoucher } from "@/lib/custom-booking-voucher";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -24,6 +25,79 @@ type DeliveryResult = {
     | "DELIVERY_UNCERTAIN";
   emailId?: string;
 };
+
+async function createVoucherAttachment(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const fields = payload as Record<string, unknown>;
+  if (fields.bookingType !== "CUSTOM" || typeof fields.bookingReference !== "string") {
+    return null;
+  }
+
+  const { data: booking, error: bookingError } = await supabaseAdmin
+    .from("custom_bookings")
+    .select("*")
+    .eq("booking_reference", fields.bookingReference)
+    .maybeSingle();
+
+  if (bookingError) throw bookingError;
+  if (!booking) throw new Error("Custom booking for voucher was not found.");
+
+  const [installmentsResult, paymentsResult] = await Promise.all([
+    supabaseAdmin
+      .from("custom_booking_installments")
+      .select("*")
+      .eq("custom_booking_id", booking.id)
+      .order("installment_number", { ascending: true }),
+    supabaseAdmin
+      .from("custom_booking_payments")
+      .select("*")
+      .eq("custom_booking_id", booking.id)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (installmentsResult.error) throw installmentsResult.error;
+  if (paymentsResult.error) throw paymentsResult.error;
+
+  const content = await createCustomBookingVoucher(
+    {
+      bookingReference: booking.booking_reference,
+      packageName: booking.package_name,
+      customerName: booking.customer_name,
+      phone: booking.phone,
+      email: booking.email,
+      travelers: booking.travelers,
+      travelStartDate: booking.travel_start_date,
+      travelEndDate: booking.travel_end_date,
+      bookingStatus: booking.booking_status,
+      paymentStatus: booking.payment_status,
+      totalAmount: Number(booking.total_amount),
+      amountPaid: Number(booking.amount_paid),
+      balanceAmount: Number(booking.balance_amount),
+      installments: (installmentsResult.data || []).map((installment) => ({
+        label: installment.label,
+        amount: Number(installment.amount),
+        dueDate: installment.due_date,
+        paidAmount: Number(installment.paid_amount),
+        status: installment.status,
+        paidAt: installment.paid_at,
+      })),
+      payments: (paymentsResult.data || []).map((payment) => ({
+        providerPaymentId: payment.provider_payment_id,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        status: payment.status,
+        createdAt: payment.created_at,
+      })),
+    },
+    path.join(process.cwd(), "public", "bucketlist-logo.png")
+  );
+
+  return {
+    filename: `${booking.booking_reference}-voucher.pdf`,
+    content,
+    contentType: "application/pdf",
+  };
+}
 
 function smtpErrorDetails(error: unknown): {
   description: string;
@@ -162,6 +236,10 @@ export async function processNextBookingEmail(): Promise<DeliveryResult> {
       const logoContent = await readFile(
   path.join(process.cwd(), "public", "bucketlist-logo.png")
 );  
+      const voucherAttachment =
+        job.email_kind === "BOOKING_CONFIRMED"
+          ? await createVoucherAttachment(job.payload)
+          : null;
       const result = await transport.sendMail({
         from,
         to: { address: recipient, name: "" },
@@ -180,6 +258,7 @@ export async function processNextBookingEmail(): Promise<DeliveryResult> {
     contentDisposition: "inline",
     cid: "booking-logo@bucketlistadventure.in",
   },
+  ...(voucherAttachment ? [voucherAttachment] : []),
 ],
       });
 
