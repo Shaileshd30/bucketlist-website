@@ -25,6 +25,32 @@ const createSlug = (title: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const createAvailableSlug = (
+  title: string,
+  currentSlug: string,
+  trips: TripData[]
+) => {
+  const baseSlug = createSlug(title);
+
+  if (!baseSlug) return currentSlug;
+
+  const usedSlugs = new Set(
+    trips
+      .filter((item) => item.slug !== currentSlug)
+      .map((item) => item.slug)
+  );
+
+  let nextSlug = baseSlug;
+  let suffix = 2;
+
+  while (usedSlugs.has(nextSlug)) {
+    nextSlug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return nextSlug;
+};
+
 const uploadTripImage = async (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
@@ -117,35 +143,11 @@ export default function AdminPage() {
 
     if (!currentTrip) return;
 
-    const isNewTrip =
-      currentTrip.slug.startsWith("new-trip-") ||
-      newTripSlugs.includes(currentTrip.slug);
-
-    /*
-     * Existing published trips may have their visible title renamed,
-     * but their existing public URL stays unchanged.
-     */
-    if (!isNewTrip) {
-      setTrips((current) =>
-        current.map((item) =>
-          item.slug === selectedSlug
-            ? {
-                ...item,
-                title: value,
-              }
-            : item
-        )
-      );
-
-      return;
-    }
-
-    /*
-     * New trips keep generating their URL from the title until
-     * the trip is saved for the first time.
-     */
-    const generatedSlug = createSlug(value);
-    const nextSlug = generatedSlug || currentTrip.slug;
+    const nextSlug = createAvailableSlug(
+      value,
+      selectedSlug,
+      trips
+    );
 
     setTrips((current) =>
       current.map((item) =>
@@ -160,6 +162,10 @@ export default function AdminPage() {
     );
 
     setNewTripSlugs((current) => {
+      if (!current.includes(selectedSlug)) {
+        return current;
+      }
+
       const withoutPreviousSlug = current.filter(
         (slug) => slug !== selectedSlug
       );
@@ -173,6 +179,18 @@ export default function AdminPage() {
     });
 
     if (nextSlug !== selectedSlug) {
+      setItineraryFormatOverrides((current) => {
+        const format = current[selectedSlug];
+
+        if (!format) return current;
+
+        const next = { ...current };
+        delete next[selectedSlug];
+        next[nextSlug] = format;
+
+        return next;
+      });
+
       setSelectedSlug(nextSlug);
     }
   };
@@ -1232,7 +1250,7 @@ const deleteBatch = (batchId: string) => {
                 /trips/{trip.slug}
               </div>
               <p className="text-xs leading-5 text-[#718078]">
-                A new trip URL is generated automatically from its title. Existing trip URLs stay unchanged when you rename the title.
+                The trip URL follows its title. Saving a renamed trip changes its public link, so update any links you have already shared.
               </p>
             </div>
 

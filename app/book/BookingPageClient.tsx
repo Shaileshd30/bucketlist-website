@@ -16,6 +16,8 @@ type CustomerDetails = {
   email: string;
 };
 
+type CustomerField = keyof CustomerDetails;
+
 type AppliedCoupon = {
   code: string;
   discountAmount: number;
@@ -118,6 +120,11 @@ export default function BookingPageClient() {
     phone: "",
     email: "",
   });
+  const [touchedFields, setTouchedFields] = useState<
+    Partial<Record<CustomerField, boolean>>
+  >({});
+  const [validationRequested, setValidationRequested] =
+    useState(false);
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
@@ -270,10 +277,47 @@ export default function BookingPageClient() {
     });
   };
 
-  const isCustomerValid =
-    customer.name.trim().length > 1 &&
-    customer.phone.replace(/\D/g, "").length >= 10 &&
-    customer.email.includes("@");
+  const normalizedName = customer.name.trim();
+  const phoneDigits = customer.phone.replace(/\D/g, "");
+  const normalizedEmail = customer.email.trim();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const customerErrors: Record<CustomerField, string> = {
+    name:
+      !normalizedName
+        ? "Please enter your full name."
+        : normalizedName.length < 2 || normalizedName.length > 100
+          ? "Please enter a valid full name."
+          : "",
+    phone:
+      !phoneDigits
+        ? "Please enter your mobile number."
+        : phoneDigits.length < 10 || phoneDigits.length > 15
+          ? "Please enter a valid 10–15 digit mobile number."
+          : "",
+    email:
+      !normalizedEmail
+        ? "Please enter your email address."
+        : normalizedEmail.length > 254 ||
+            !emailPattern.test(normalizedEmail)
+          ? "Please enter a valid email address."
+          : "",
+  };
+
+  const isCustomerValid = Object.values(customerErrors).every(
+    (message) => !message
+  );
+
+  const showFieldError = (field: CustomerField) =>
+    Boolean(customerErrors[field]) &&
+    (Boolean(touchedFields[field]) || validationRequested);
+
+  const markFieldTouched = (field: CustomerField) => {
+    setTouchedFields((current) => ({
+      ...current,
+      [field]: true,
+    }));
+  };
 
   const canContinue =
     Boolean(trip) &&
@@ -506,12 +550,34 @@ export default function BookingPageClient() {
 
   const handleContinue = async () => {
     if (
-      !trip ||
-      !batch ||
-      !canContinue ||
       isCreatingBooking ||
       isProcessingPayment
     ) {
+      return;
+    }
+
+    setValidationRequested(true);
+    setTouchedFields({
+      name: true,
+      phone: true,
+      email: true,
+    });
+
+    if (!trip || !batch || !canContinue) {
+      const firstInvalidField = (
+        ["name", "phone", "email"] as CustomerField[]
+      ).find((field) => customerErrors[field]);
+
+      if (firstInvalidField) {
+        document
+          .getElementById(`customer-${firstInvalidField}`)
+          ?.focus();
+      } else if (!acceptedTerms) {
+        document
+          .getElementById("booking-terms")
+          ?.focus();
+      }
+
       return;
     }
 
@@ -677,6 +743,7 @@ export default function BookingPageClient() {
                   <span>Full name *</span>
 
                   <input
+                    id="customer-name"
                     value={customer.name}
                     onChange={(event) =>
                       setCustomer((current) => ({
@@ -686,14 +753,35 @@ export default function BookingPageClient() {
                     }
                     placeholder="Your full name"
                     autoComplete="name"
-                    className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                    maxLength={100}
+                    onBlur={() => markFieldTouched("name")}
+                    aria-invalid={showFieldError("name")}
+                    aria-describedby={
+                      showFieldError("name")
+                        ? "customer-name-error"
+                        : undefined
+                    }
+                    className={`w-full rounded-2xl border bg-[#f7f5f2] px-4 py-3 outline-none transition ${
+                      showFieldError("name")
+                        ? "border-red-500 bg-red-50 focus:border-red-500"
+                        : "border-black/10 focus:border-orange-400"
+                    }`}
                   />
+                  {showFieldError("name") && (
+                    <p
+                      id="customer-name-error"
+                      className="text-xs font-semibold text-red-600"
+                    >
+                      {customerErrors.name}
+                    </p>
+                  )}
                 </label>
 
                 <label className="block space-y-2 text-sm font-medium">
                   <span>Mobile number *</span>
 
                   <input
+                    id="customer-phone"
                     type="tel"
                     value={customer.phone}
                     onChange={(event) =>
@@ -704,14 +792,36 @@ export default function BookingPageClient() {
                     }
                     placeholder="10-digit mobile number"
                     autoComplete="tel"
-                    className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                    inputMode="tel"
+                    maxLength={20}
+                    onBlur={() => markFieldTouched("phone")}
+                    aria-invalid={showFieldError("phone")}
+                    aria-describedby={
+                      showFieldError("phone")
+                        ? "customer-phone-error"
+                        : undefined
+                    }
+                    className={`w-full rounded-2xl border bg-[#f7f5f2] px-4 py-3 outline-none transition ${
+                      showFieldError("phone")
+                        ? "border-red-500 bg-red-50 focus:border-red-500"
+                        : "border-black/10 focus:border-orange-400"
+                    }`}
                   />
+                  {showFieldError("phone") && (
+                    <p
+                      id="customer-phone-error"
+                      className="text-xs font-semibold text-red-600"
+                    >
+                      {customerErrors.phone}
+                    </p>
+                  )}
                 </label>
 
                 <label className="block space-y-2 text-sm font-medium">
                   <span>Email *</span>
 
                   <input
+                    id="customer-email"
                     type="email"
                     value={customer.email}
                     onChange={(event) =>
@@ -722,8 +832,28 @@ export default function BookingPageClient() {
                     }
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 outline-none transition focus:border-orange-400"
+                    maxLength={254}
+                    onBlur={() => markFieldTouched("email")}
+                    aria-invalid={showFieldError("email")}
+                    aria-describedby={
+                      showFieldError("email")
+                        ? "customer-email-error"
+                        : undefined
+                    }
+                    className={`w-full rounded-2xl border bg-[#f7f5f2] px-4 py-3 outline-none transition ${
+                      showFieldError("email")
+                        ? "border-red-500 bg-red-50 focus:border-red-500"
+                        : "border-black/10 focus:border-orange-400"
+                    }`}
                   />
+                  {showFieldError("email") && (
+                    <p
+                      id="customer-email-error"
+                      className="text-xs font-semibold text-red-600"
+                    >
+                      {customerErrors.email}
+                    </p>
+                  )}
                 </label>
               </div>
             </div>
@@ -871,8 +1001,15 @@ export default function BookingPageClient() {
             </div>
 
             {/* Terms */}
-            <label className="flex items-start gap-3 rounded-[24px] border border-black/10 bg-white p-5 text-sm">
+            <label
+              className={`flex items-start gap-3 rounded-[24px] border bg-white p-5 text-sm ${
+                validationRequested && !acceptedTerms
+                  ? "border-red-500"
+                  : "border-black/10"
+              }`}
+            >
               <input
+                id="booking-terms"
                 type="checkbox"
                 checked={acceptedTerms}
                 disabled={bookingUnavailable}
@@ -886,6 +1023,11 @@ export default function BookingPageClient() {
                 I confirm that the booking details are correct and I
                 agree to Bucketlist Adventure&apos;s booking and
                 cancellation terms.
+                {validationRequested && !acceptedTerms && (
+                  <span className="mt-2 block text-xs font-semibold text-red-600">
+                    Please accept the booking and cancellation terms.
+                  </span>
+                )}
               </span>
             </label>
           </div>
@@ -1009,7 +1151,7 @@ export default function BookingPageClient() {
             <button
               type="button"
               disabled={
-                !canContinue ||
+                bookingUnavailable ||
                 isCreatingBooking ||
                 isProcessingPayment ||
                 paymentConfirmed
@@ -1027,6 +1169,35 @@ export default function BookingPageClient() {
                       ? "Retry Payment"
                       : "Continue to Payment"}
             </button>
+
+            {validationRequested &&
+              (!isCustomerValid || !acceptedTerms) && (
+                <div
+                  role="alert"
+                  className="mt-4 rounded-2xl bg-red-500/15 p-4 text-sm text-red-100"
+                >
+                  <p className="font-semibold">
+                    Please review your booking details
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {(
+                      ["name", "phone", "email"] as CustomerField[]
+                    ).map((field) =>
+                      customerErrors[field] ? (
+                        <li key={field}>
+                          {customerErrors[field]}
+                        </li>
+                      ) : null
+                    )}
+                    {!acceptedTerms && (
+                      <li>
+                        Please accept the booking and cancellation
+                        terms.
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
 
             {bookingError && (
               <div className="mt-4 rounded-2xl bg-red-500/15 p-4 text-sm text-red-200">
@@ -1079,7 +1250,8 @@ export default function BookingPageClient() {
             )}
 
             {!bookingUnavailable &&
-              !acceptedTerms && (
+              !validationRequested &&
+              (!isCustomerValid || !acceptedTerms) && (
                 <p className="mt-3 text-center text-xs text-white/50">
                   Complete your details and accept the terms
                   to continue.
