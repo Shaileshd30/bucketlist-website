@@ -233,6 +233,7 @@ export function renderBookingEmail(
     paymentNote,
     "",
     "Questions? Reply to this email.",
+    "Booking support: bookings@bucketlistadventure.in | +91 92255 31257",
     "",
     "Bucketlist Adventure",
     "We Plan It. You Live It.",
@@ -297,6 +298,10 @@ export function renderBookingEmail(
   &nbsp;|&nbsp;
   <a href="https://wa.me/919225531257" style="color:#17251d;">
     WhatsApp
+  </a>
+  &nbsp;|&nbsp;
+  <a href="mailto:bookings@bucketlistadventure.in" style="color:#17251d;">
+    bookings@bucketlistadventure.in
   </a>
 </p>
 

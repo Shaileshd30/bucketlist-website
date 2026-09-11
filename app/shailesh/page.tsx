@@ -9,7 +9,7 @@ const contact = {
   phone: "+918482846287",
   email: "shailesh@bucketlistadventure.in",
   website: "https://bucketlistadventure.in/",
-  address: "The Office Club, Runwal Platinum, Bavdhan, Pune, Maharashtra, India 411021",
+  address: "Rutu Banglow, Lane No. 11, Shahu Colony, Karve Nagar, Pune, Maharashtra, India 411052",
 };
 
 const links = {
@@ -19,7 +19,7 @@ const links = {
   facebook: "https://m.facebook.com/bucketlistadventures2018/",
   reviews: "https://share.google/Q9k66ci3TGFVHkuOl",
   maps:
-    "https://www.google.com/maps/search/?api=1&query=The%20Office%20Club%20Runwal%20Platinum%20Bavdhan%20Pune%20411021",
+    "https://www.google.com/maps/search/?api=1&query=Rutu%20Banglow%20Lane%20No%2011%20Shahu%20Colony%20Karve%20Nagar%20Pune%20411052",
 };
 
 function downloadContact() {
@@ -34,7 +34,7 @@ function downloadContact() {
     `TEL;TYPE=CELL,WHATSAPP:${contact.phone}`,
     `EMAIL;TYPE=INTERNET:${contact.email}`,
     `URL:${contact.website}`,
-    `ADR;TYPE=WORK:;;The Office Club, Runwal Platinum;Bavdhan, Pune;Maharashtra;411021;India`,
+    `ADR;TYPE=WORK:;;Rutu Banglow, Lane No. 11, Shahu Colony;Karve Nagar, Pune;Maharashtra;411052;India`,
     "NOTE:We Plan It. You Live It.",
     "END:VCARD",
   ].join("\r\n");

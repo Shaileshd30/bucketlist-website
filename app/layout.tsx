@@ -147,26 +147,26 @@ const structuredData = {
         "We Plan It. You Live It.",
 
       telephone:
-        "+91-92255-31257",
+        "+91-84828-46287",
 
       email:
-        "bucketlistdestinations2@gmail.com",
+        "info@bucketlistadventure.in",
 
       address: {
         "@type":
           "PostalAddress",
 
         streetAddress:
-          "U7/C7, Runwal Platinum, NDA Pashan Road",
+          "Rutu Banglow, Lane No. 11, Shahu Colony, Karve Nagar",
 
         addressLocality:
-          "Bavdhan",
+          "Pune",
 
         addressRegion:
           "Maharashtra",
 
         postalCode:
-          "411021",
+          "411052",
 
         addressCountry:
           "IN",
@@ -199,10 +199,32 @@ const structuredData = {
             "ContactPoint",
 
           telephone:
+            "+91-84828-46287",
+
+          contactType:
+            "sales",
+
+          areaServed:
+            "IN",
+
+          availableLanguage: [
+            "English",
+            "Hindi",
+            "Marathi",
+          ],
+        },
+        {
+          "@type":
+            "ContactPoint",
+
+          telephone:
             "+91-92255-31257",
 
           contactType:
             "customer service",
+
+          email:
+            "bookings@bucketlistadventure.in",
 
           areaServed:
             "IN",

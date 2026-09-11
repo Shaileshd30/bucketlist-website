@@ -57,14 +57,14 @@ export default function ContactPage() {
               </p>
 
               <div className="mt-8 space-y-2 text-[16px] leading-7 text-[#5d6862]">
-                <p>U7/C7, Runwal Platinum</p>
-                <p>NDA Pashan Road, Bavdhan</p>
-                <p>Pune, Maharashtra – 411021</p>
+                <p>Rutu Banglow, Lane No. 11</p>
+                <p>Shahu Colony, Karve Nagar</p>
+                <p>Pune, Maharashtra – 411052</p>
                 <p>India</p>
               </div>
 
               <a
-                href="https://www.google.com/maps/search/?api=1&query=Runwal+Platinum+NDA+Pashan+Road+Bavdhan+Pune+411021"
+                href="https://www.google.com/maps/search/?api=1&query=Rutu+Banglow+Lane+No+11+Shahu+Colony+Karve+Nagar+Pune+411052"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-8 inline-flex rounded-full bg-[#17251d] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
@@ -84,28 +84,35 @@ export default function ContactPage() {
               </h2>
 
               <div className="mt-10 space-y-4">
-                <ContactItem
-  label="Phone"
-  value="+91 84828 46287"
-  href="tel:+918482846287"
-/>
-
 <ContactItem
-  label="WhatsApp"
+  label="Enquiries / WhatsApp"
   value="+91 84828 46287"
   href="https://wa.me/918482846287"
   external
 />
 
                 <ContactItem
-                  label="Email"
-                  value="bucketlistdestinations2@gmail.com"
-                  href="mailto:bucketlistdestinations2@gmail.com"
+                  label="Booking support"
+                  value="+91 92255 31257"
+                  href="https://wa.me/919225531257"
+                  external
+                />
+
+                <ContactItem
+                  label="General enquiries"
+                  value="info@bucketlistadventure.in"
+                  href="mailto:info@bucketlistadventure.in"
+                />
+
+                <ContactItem
+                  label="Booking email"
+                  value="bookings@bucketlistadventure.in"
+                  href="mailto:bookings@bucketlistadventure.in"
                 />
               </div>
 
               <a
-                href="https://wa.me/919225531257?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20plan%20a%20trip."
+                href="https://wa.me/918482846287?text=Hi%20Bucketlist%20Adventure%2C%20I%20would%20like%20to%20plan%20a%20trip."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-10 inline-flex rounded-full bg-orange-500 px-7 py-4 text-sm font-bold text-white transition hover:bg-orange-600"

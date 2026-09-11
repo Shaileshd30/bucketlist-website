@@ -223,7 +223,7 @@ export function createCustomBookingVoucher(
       .text("This voucher records payments received for the booking shown above. Package inclusions and cancellation terms remain subject to the confirmed proposal.", contentX + 16, y + 34, { width: contentWidth - 32, lineGap: 2 });
 
     document.fillColor(MUTED).font("Helvetica").fontSize(8)
-      .text("bucketlistadventure.in  |  +91 92255 31257  |  bucketlistdestinations2@gmail.com", contentX, document.page.height - 34, { width: contentWidth, align: "center" });
+      .text("bucketlistadventure.in  |  +91 92255 31257  |  bookings@bucketlistadventure.in", contentX, document.page.height - 34, { width: contentWidth, align: "center" });
 
     document.end();
   });

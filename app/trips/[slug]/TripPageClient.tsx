@@ -616,12 +616,12 @@ export function TripPageClient({ trip }: { trip: TripData }) {
         pdf.setFontSize(6.8);
         pdf.setTextColor(...muted);
         pdf.text(
-          "WhatsApp: +91 92255 31257  |  Contact: +91 84828 46287",
+          "Enquiries: +91 84828 46287  |  Booking support: +91 92255 31257",
           marginX,
           footerY + 4
         );
         pdf.text(
-          "bucketlistdestinations2@gmail.com  |  bucketlistadventure.in",
+          "bookings@bucketlistadventure.in  |  bucketlistadventure.in",
           marginX,
           footerY + 8
         );
@@ -1263,7 +1263,7 @@ export function TripPageClient({ trip }: { trip: TripData }) {
               </p>
 
               <span className="text-sm text-[#5d6862]">
-                {gallery.length} images
+                {gallery.length} {gallery.length === 1 ? "image" : "images"}
               </span>
             </div>
 
