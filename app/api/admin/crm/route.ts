@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-auth";
+import { isSameOriginRequest } from "@/lib/request-origin";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +11,6 @@ const ACTIVITIES = new Set(["CALL", "WHATSAPP", "EMAIL", "MEETING", "NOTE", "FOL
 const text = (value: unknown, max = 500) => typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
 const phoneKey = (value: string | null) => value ? value.replace(/[^0-9]/g, "") || null : null;
 const emailKey = (value: string | null) => value ? value.trim().toLowerCase() || null : null;
-
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
-}
 
 async function findOrCreateCustomer(input: Record<string, unknown>) {
   const fullName = text(input.fullName, 150);
@@ -99,7 +95,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const authError = await requireAdmin();
   if (authError) return authError;
-  if (!sameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
+  if (!isSameOriginRequest(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {
     const input = await request.json() as Record<string, unknown>;
     const customer = await findOrCreateCustomer(input);
@@ -126,7 +122,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const authError = await requireAdmin();
   if (authError) return authError;
-  if (!sameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
+  if (!isSameOriginRequest(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {
     const input = await request.json() as Record<string, unknown>;
     const leadId = text(input.leadId, 80);

@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { Readable } from "node:stream";
 import { requireAdmin } from "@/lib/admin-auth";
+import { isSameOriginRequest } from "@/lib/request-origin";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -9,9 +10,9 @@ export const dynamic = "force-dynamic";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_ROWS = 2000;
 const aliases: Record<string, string[]> = {
-  fullName: ["customer name", "name", "full name", "customer"],
-  phone: ["mobile", "mobile number", "phone", "phone number", "contact"],
-  email: ["email", "email address"], interestedTrip: ["interested trip", "trip", "package", "destination"],
+  fullName: ["customer name", "name", "full name", "customer", "participant name", "traveller name", "traveler name"],
+  phone: ["mobile", "mobile number", "mobile no", "phone", "phone number", "contact", "contact number", "whatsapp", "whatsapp number"],
+  email: ["email", "email address", "email id"], interestedTrip: ["interested trip", "trip", "package", "destination", "interested destination", "trek name"],
   travelMonth: ["travel month", "month", "travel date"], source: ["lead source", "source"],
   status: ["status", "lead status"], nextFollowUpAt: ["next follow-up", "follow up", "follow-up date"],
   assignedTo: ["assigned to", "owner", "caller"], notes: ["notes", "remarks", "comment"], city: ["city", "location"],
@@ -28,8 +29,7 @@ function valueText(value: unknown) {
 export async function POST(request: Request) {
   const authError = await requireAdmin();
   if (authError) return authError;
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return Response.json({ error: "Invalid request origin." }, { status: 403 });
+  if (!isSameOriginRequest(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {
     const form = await request.formData();
     const file = form.get("file");
