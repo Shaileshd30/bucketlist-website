@@ -87,6 +87,7 @@ export default function AdminPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -107,6 +108,21 @@ export default function AdminPage() {
       nextTrips.some((item) => item.slug === current) ? current : nextTrips[0].slug
     );
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/admin/session", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (response.status !== 200 && response.status !== 401) throw new Error();
+        const session = await response.json();
+        if (!controller.signal.aborted) setIsAuthenticated(response.ok && session.authenticated === true);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setError("Could not check your session. Please sign in again.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setCheckingSession(false); });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const fetchTrips = async () => {
@@ -1023,6 +1039,10 @@ const deleteBatch = (batchId: string) => {
   }
 };
 
+  if (checkingSession) {
+    return <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee] text-[#17251d]"><p role="status">Checking your admin session…</p></main>;
+  }
+
   if (!isAuthenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee] px-6 py-12 text-[#17251d]">
@@ -1210,6 +1230,13 @@ const deleteBatch = (batchId: string) => {
           >
             Custom Bookings
           </button>
+
+          <Link
+            href="/admin/crm"
+            className="rounded-full border border-orange-300 bg-orange-50 px-5 py-3 text-sm font-semibold text-[#17251d] transition hover:bg-orange-500 hover:text-white"
+          >
+            Customers & Leads →
+          </Link>
 
         {adminSection === "TRIPS" && (
         <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-[0_24px_60px_rgba(0,0,0,0.06)] lg:p-8">
