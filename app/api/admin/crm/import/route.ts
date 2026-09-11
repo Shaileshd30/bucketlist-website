@@ -20,6 +20,25 @@ const aliases: Record<string, string[]> = {
 const statuses: Record<string, string> = { new: "NEW", called: "CALLED", "follow up": "FOLLOW_UP", followup: "FOLLOW_UP", interested: "INTERESTED", "quotation sent": "QUOTATION_SENT", confirmed: "CONFIRMED", "not interested": "NOT_INTERESTED", closed: "CLOSED" };
 
 function key(value: unknown) { return String(value ?? "").trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " "); }
+function findColumn(headerMap: Map<string, number>, field: string, names: string[]) {
+  const headers = [...headerMap.entries()].filter(([header]) => {
+    if ((field === "fullName" || field === "phone") && /\bemergency\b/.test(header)) return false;
+    return true;
+  });
+  for (const name of names) {
+    const exact = headerMap.get(name);
+    if (exact) return exact;
+  }
+  for (const name of names) {
+    const match = headers.find(([header]) => header.startsWith(`${name} `) || header.startsWith(`${name}(`));
+    if (match) return match[1];
+  }
+  for (const name of names.filter((value) => value.length >= 5)) {
+    const match = headers.find(([header]) => header.includes(name));
+    if (match) return match[1];
+  }
+  return undefined;
+}
 function valueText(value: unknown) {
   if (value && typeof value === "object" && "text" in value) return String((value as { text: unknown }).text ?? "").trim();
   if (value instanceof Date) return value.toISOString();
@@ -46,8 +65,8 @@ export async function POST(request: Request) {
     const headerMap = new Map<string, number>();
     sheet.getRow(1).eachCell((cell, column) => headerMap.set(key(valueText(cell.value)), column));
     const columns: Record<string, number | undefined> = {};
-    for (const [field, names] of Object.entries(aliases)) columns[field] = names.map((name) => headerMap.get(name)).find(Boolean);
-    if (!columns.fullName || (!columns.phone && !columns.email)) return Response.json({ error: "The sheet needs Customer Name and either Mobile or Email columns." }, { status: 400 });
+    for (const [field, names] of Object.entries(aliases)) columns[field] = findColumn(headerMap, field, names);
+    if (!columns.fullName || (!columns.phone && !columns.email)) return Response.json({ error: "A Full Name/Customer Name column and either a Phone/Mobile/Email column are required. Longer Google Form question headings are supported." }, { status: 400 });
 
     const importResult = await supabaseAdmin.from("crm_lead_imports").insert({ file_name: file.name, imported_by: "Admin" }).select("id").single();
     if (importResult.error) throw importResult.error;

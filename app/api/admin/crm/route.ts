@@ -125,6 +125,19 @@ export async function PATCH(request: Request) {
   if (!isSameOriginRequest(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {
     const input = await request.json() as Record<string, unknown>;
+    const leadIds = Array.isArray(input.leadIds) ? input.leadIds.filter((value): value is string => typeof value === "string" && value.length > 0).slice(0, 500) : [];
+    if (leadIds.length) {
+      const assignedTo = text(input.assignedTo, 100);
+      if (!assignedTo) throw new Error("VALIDATION");
+      const updated = await supabaseAdmin.from("crm_leads").update({ assigned_to: assignedTo, updated_at: new Date().toISOString() }).in("id", leadIds).select("id");
+      if (updated.error) throw updated.error;
+      const activities = (updated.data || []).map((lead) => ({ lead_id: lead.id, activity_type: "NOTE", note: `Lead assigned to ${assignedTo}`, created_by: "Admin" }));
+      if (activities.length) {
+        const activityResult = await supabaseAdmin.from("crm_lead_activities").insert(activities);
+        if (activityResult.error) throw activityResult.error;
+      }
+      return Response.json({ updated: updated.data?.length || 0 });
+    }
     const leadId = text(input.leadId, 80);
     const status = text(input.status, 40);
     const activityType = text(input.activityType, 40) || "NOTE";
