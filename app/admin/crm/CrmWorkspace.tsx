@@ -169,7 +169,7 @@ export default function CrmWorkspace() {
   return <main className={styles.shell}>
     <aside className={styles.sidebar}>
       <Link href="/admin" className={styles.brand} aria-label="Bucketlist Adventure admin"><Image src="/bucketlist-logo.png" alt="Bucketlist Adventure" width={1780} height={1008} priority /><small>BUSINESS WORKSPACE</small></Link>
-      <nav><button className={styles.active}>◎ <span>CRM workspace</span></button><Link href="/admin?section=trips">◇ <span>Trips & departures</span></Link><Link href="/admin?section=custom-bookings">▣ <span>Custom bookings</span></Link><Link href="/admin/finance"><span>Vendors &amp; DMCs</span></Link><Link href="/admin/itinerary-planner">✦ <span>Itinerary planner</span></Link></nav>
+      <nav><button className={styles.active}>◎ <span>CRM workspace</span></button><Link href="/admin?section=trips">◇ <span>Trips & departures</span></Link><Link href="/admin?section=custom-bookings">▣ <span>Custom bookings</span></Link><Link href="/admin/reminders"><span>Email reminders</span></Link><Link href="/admin/finance"><span>Vendors &amp; DMCs</span></Link><Link href="/admin/itinerary-planner">✦ <span>Itinerary planner</span></Link></nav>
       <div className={styles.sideFoot}><span className={styles.liveDot} /> Secure staff area</div>
     </aside>
     <section className={styles.workspace}>
