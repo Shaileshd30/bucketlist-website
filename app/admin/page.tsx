@@ -25,6 +25,20 @@ const createSlug = (title: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+type AdminSection = "TRIPS" | "COUPONS" | "CUSTOM_BOOKINGS";
+
+const getInitialAdminSection = (): AdminSection => {
+  if (typeof window === "undefined") return "TRIPS";
+  const requested = new URLSearchParams(window.location.search).get("section");
+  const sections: Record<string, AdminSection> = {
+    trips: "TRIPS",
+    bookings: "CUSTOM_BOOKINGS",
+    "custom-bookings": "CUSTOM_BOOKINGS",
+    coupons: "COUPONS",
+  };
+  return requested ? sections[requested] || "TRIPS" : "TRIPS";
+};
+
 const createAvailableSlug = (
   title: string,
   currentSlug: string,
@@ -92,13 +106,20 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [siteSynced, setSiteSynced] = useState(true);
-  const [adminSection, setAdminSection] = useState<"TRIPS" | "COUPONS" | "CUSTOM_BOOKINGS">("TRIPS");
+  const [adminSection, setAdminSection] = useState<AdminSection>(getInitialAdminSection);
   const [, setNewTripSlugs] = useState<string[]>([]);
   const [isDeletingTrip, setIsDeletingTrip] = useState(false);
   const [itineraryFormatOverrides, setItineraryFormatOverrides] = useState<Record<string, ItineraryFormat>>({});
 
   const trip = trips.find((item) => item.slug === selectedSlug) ?? trips[0] ?? defaultTrips[0];
   const itineraryFormat = itineraryFormatOverrides[selectedSlug] ?? inferItineraryFormat(trip);
+
+  const selectAdminSection = (section: AdminSection) => {
+    setAdminSection(section);
+    const params = new URLSearchParams(window.location.search);
+    params.set("section", section.toLowerCase().replace("_", "-"));
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  };
 
   const syncSelectedTrip = (nextTrips: TripData[]) => {
     if (!nextTrips.length) return;
@@ -1199,7 +1220,7 @@ const deleteBatch = (batchId: string) => {
         <div className="mb-6 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => setAdminSection("TRIPS")}
+            onClick={() => selectAdminSection("TRIPS")}
             className={`rounded-full px-5 py-3 text-sm font-semibold transition ${adminSection === "TRIPS"
                 ? "bg-[#17251d] text-white"
                 : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
@@ -1210,7 +1231,7 @@ const deleteBatch = (batchId: string) => {
 
           <button
             type="button"
-            onClick={() => setAdminSection("COUPONS")}
+            onClick={() => selectAdminSection("COUPONS")}
             className={`rounded-full px-5 py-3 text-sm font-semibold transition ${adminSection === "COUPONS"
                 ? "bg-[#17251d] text-white"
                 : "border border-[#17251d]/15 bg-white text-[#17251d] hover:bg-[#17251d] hover:text-white"
@@ -1221,7 +1242,7 @@ const deleteBatch = (batchId: string) => {
         </div>
           <button
             type="button"
-            onClick={() => setAdminSection("CUSTOM_BOOKINGS")}
+            onClick={() => selectAdminSection("CUSTOM_BOOKINGS")}
             className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
               adminSection === "CUSTOM_BOOKINGS"
                 ? "bg-[#17251d] text-white"
