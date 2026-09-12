@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./crm.module.css";
+import CrmToday from "./CrmToday";
 
 type Customer = { id: string; full_name: string; phone?: string; email?: string; city?: string; normalized_phone?: string; last_seen_at: string };
 type Activity = { id: string; activity_type: string; note?: string; created_at: string; to_status?: string };
@@ -20,7 +21,7 @@ const initialForm = { fullName: "", phone: "", email: "", city: "", interestedTr
 
 export default function CrmWorkspace() {
   const router = useRouter();
-  const [tab, setTab] = useState<"leads" | "customers" | "payments" | "import">("leads");
+  const [tab, setTab] = useState<"today" | "leads" | "customers" | "payments" | "import">("today");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [summary, setSummary] = useState<Summary>({ total: 0, new: 0, due: 0, confirmed: 0 });
   const [customers, setCustomers] = useState<CustomerPayload>({ customers: [], bookings: [], customBookings: [] });
@@ -168,12 +169,13 @@ export default function CrmWorkspace() {
   return <main className={styles.shell}>
     <aside className={styles.sidebar}>
       <Link href="/admin" className={styles.brand} aria-label="Bucketlist Adventure admin"><Image src="/bucketlist-logo.png" alt="Bucketlist Adventure" width={1780} height={1008} priority /><small>BUSINESS WORKSPACE</small></Link>
-      <nav><button className={styles.active}>◎ <span>CRM workspace</span></button><Link href="/admin?section=trips">◇ <span>Trips & departures</span></Link><Link href="/admin?section=custom-bookings">▣ <span>Custom bookings</span></Link><Link href="/admin/itinerary-planner">✦ <span>Itinerary planner</span></Link></nav>
+      <nav><button className={styles.active}>◎ <span>CRM workspace</span></button><Link href="/admin?section=trips">◇ <span>Trips & departures</span></Link><Link href="/admin?section=custom-bookings">▣ <span>Custom bookings</span></Link><Link href="/admin/finance"><span>Vendors &amp; DMCs</span></Link><Link href="/admin/itinerary-planner">✦ <span>Itinerary planner</span></Link></nav>
       <div className={styles.sideFoot}><span className={styles.liveDot} /> Secure staff area</div>
     </aside>
     <section className={styles.workspace}>
-      <header className={styles.header}><div><p>Bucketlist / Customer operations</p><h1>Customers & leads</h1><span className={styles.subtitle}>Your conversations, follow-ups and traveller history.</span></div><button className={styles.primary} onClick={() => setShowCreate(true)}>＋ Add lead</button></header>
+      <header className={styles.header}><div><p>Bucketlist / Customer operations</p><h1>{tab === "today" ? "Your operations, at a glance" : tab === "payments" ? "Bookings & payments" : tab === "customers" ? "Your travellers" : tab === "import" ? "Bring your leads together" : "Customers & leads"}</h1><span className={styles.subtitle}>A clear view of your trips, conversations and next steps.</span></div><button className={styles.primary} onClick={() => setShowCreate(true)}>＋ Add lead</button></header>
       <div className={styles.tabs}>
+        <button className={tab === "today" ? styles.tabActive : ""} onClick={() => setTab("today")}>Today</button>
         <button className={tab === "leads" ? styles.tabActive : ""} onClick={() => setTab("leads")}>Lead pipeline</button>
         <button className={tab === "customers" ? styles.tabActive : ""} onClick={() => { setTab("customers"); void loadCustomers(); }}>Customers</button>
         <button className={tab === "payments" ? styles.tabActive : ""} onClick={() => { setTab("payments"); void loadPaymentBookings(); }}>Bookings & payments</button>
@@ -181,6 +183,7 @@ export default function CrmWorkspace() {
       </div>
       {message && <div className={styles.notice}>{message}<button onClick={() => setMessage("")}>×</button></div>}
 
+      <CrmToday visible={tab === "today"} summary={summary} onLeads={() => { setTab("leads"); setFollowUpFilter("ALL"); }} onPayments={() => { setTab("payments"); void loadPaymentBookings(); }} />
       {tab === "leads" && <>
         <div className={styles.metrics}>{[["Total leads", summary.total], ["New enquiries", summary.new], ["Follow-ups due", summary.due], ["Confirmed", summary.confirmed]].map(([label, value], index) => <article key={String(label)}><span className={styles.metricIcon}>{["↗", "✦", "◷", "✓"][index]}</span><p>{label}</p><strong>{value}</strong></article>)}</div>
         <div className={styles.toolbar}><input aria-label="Search leads" placeholder="Search name, mobile or trip…" value={search} onChange={(e) => setSearch(e.target.value)} /><select aria-label="Filter by assignee" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}><option value="ALL">All team members</option><option value="UNASSIGNED">Unassigned</option>{teamMembers.map((name) => <option key={name}>{name}</option>)}</select><select aria-label="Filter by follow-up" value={followUpFilter} onChange={(e) => setFollowUpFilter(e.target.value as typeof followUpFilter)}><option value="ALL">All follow-ups</option><option value="TODAY">Due today</option><option value="OVERDUE">Overdue</option><option value="UNSCHEDULED">Not scheduled</option></select><select aria-label="Filter by lead stage" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="ALL">All stages</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
