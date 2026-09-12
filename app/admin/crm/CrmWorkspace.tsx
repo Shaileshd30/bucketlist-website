@@ -11,6 +11,7 @@ type Activity = { id: string; activity_type: string; note?: string; created_at: 
 type Lead = { id: string; status: string; priority: string; interested_trip?: string; travel_month?: string; source: string; assigned_to?: string; next_follow_up_at?: string; updated_at: string; customer: Customer; activities: Activity[] };
 type Summary = { total: number; new: number; due: number; confirmed: number };
 type CustomerPayload = { customers: Customer[]; bookings: Array<Record<string, unknown>>; customBookings: Array<Record<string, unknown>> };
+type PaymentSummary = { id: string; type: string; customerName: string; phone?: string; email?: string; tripTitle: string; departureDate?: string; travelers: number; totalAmount: number; amountPaid: number; balanceAmount: number; bookingStatus: string; paymentStatus: string; latestPaymentAt?: string; updatedAt: string };
 
 const statusLabels: Record<string, string> = { NEW: "New", CALLED: "Called", FOLLOW_UP: "Follow-up", INTERESTED: "Interested", QUOTATION_SENT: "Quotation sent", CONFIRMED: "Confirmed", NOT_INTERESTED: "Not interested", CLOSED: "Closed" };
 const teamMembers = ["Shailesh", "Ruturaj"];
@@ -19,10 +20,12 @@ const initialForm = { fullName: "", phone: "", email: "", city: "", interestedTr
 
 export default function CrmWorkspace() {
   const router = useRouter();
-  const [tab, setTab] = useState<"leads" | "customers" | "import">("leads");
+  const [tab, setTab] = useState<"leads" | "customers" | "payments" | "import">("leads");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [summary, setSummary] = useState<Summary>({ total: 0, new: 0, due: 0, confirmed: 0 });
   const [customers, setCustomers] = useState<CustomerPayload>({ customers: [], bookings: [], customBookings: [] });
+  const [paymentBookings, setPaymentBookings] = useState<PaymentSummary[]>([]);
+  const [paymentFilter, setPaymentFilter] = useState<"ATTENTION" | "PARTIAL" | "CONFIRMED" | "ALL">("ATTENTION");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -66,6 +69,31 @@ export default function CrmWorkspace() {
     if (!response.ok) setMessage(data.error || "Unable to load customers."); else setCustomers(data);
     setLoading(false);
   }
+
+  async function loadPaymentBookings() {
+    setLoading(true); setMessage("");
+    const response = await fetch("/api/admin/crm/bookings", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) setMessage(data.error || "Unable to load bookings."); else setPaymentBookings(data.bookings || []);
+    setLoading(false);
+  }
+
+  const paymentState = (booking: PaymentSummary) => {
+    if (["CANCELLED", "REFUNDED", "PARTIALLY_REFUNDED"].includes(booking.bookingStatus) || ["REFUNDED", "PARTIALLY_REFUNDED"].includes(booking.paymentStatus)) return "CLOSED";
+    if (booking.bookingStatus === "MANUAL_REVIEW") return "REVIEW";
+    if (booking.paymentStatus === "FAILED") return "FAILED";
+    if (booking.amountPaid >= booking.totalAmount || booking.paymentStatus === "PAID") return "CONFIRMED";
+    if (booking.amountPaid > 0) return "PARTIAL";
+    return "PENDING";
+  };
+
+  const visiblePaymentBookings = paymentBookings.filter((booking) => {
+    const state = paymentState(booking);
+    if (paymentFilter === "ATTENTION") return ["PENDING", "FAILED", "REVIEW"].includes(state);
+    if (paymentFilter === "PARTIAL") return state === "PARTIAL";
+    if (paymentFilter === "CONFIRMED") return state === "CONFIRMED";
+    return true;
+  });
 
   const visibleLeads = useMemo(() => leads.filter((lead) => {
     const query = search.toLowerCase();
@@ -148,6 +176,7 @@ export default function CrmWorkspace() {
       <div className={styles.tabs}>
         <button className={tab === "leads" ? styles.tabActive : ""} onClick={() => setTab("leads")}>Lead pipeline</button>
         <button className={tab === "customers" ? styles.tabActive : ""} onClick={() => { setTab("customers"); void loadCustomers(); }}>Customers</button>
+        <button className={tab === "payments" ? styles.tabActive : ""} onClick={() => { setTab("payments"); void loadPaymentBookings(); }}>Bookings & payments</button>
         <button className={tab === "import" ? styles.tabActive : ""} onClick={() => setTab("import")}>Import leads</button>
       </div>
       {message && <div className={styles.notice}>{message}<button onClick={() => setMessage("")}>×</button></div>}
@@ -161,6 +190,8 @@ export default function CrmWorkspace() {
       </>}
 
       {tab === "customers" && <><div className={styles.toolbar}><input placeholder="Search customer…" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void loadCustomers()} /><button onClick={() => void loadCustomers()}>Search</button></div><div className={styles.customerGrid}>{customers.customers.map((customer) => { const count = [...customers.bookings, ...customers.customBookings].filter((booking) => String(booking.phone || "").replace(/[^0-9]/g, "") === customer.normalized_phone).length; return <button key={customer.id} onClick={() => setSelectedCustomer(customer)}><b>{customer.full_name.charAt(0)}</b><div><strong>{customer.full_name}</strong><span>{customer.phone || customer.email}</span><small>{count} booking{count === 1 ? "" : "s"} · Last seen {new Date(customer.last_seen_at).toLocaleDateString("en-IN")}</small></div><i>→</i></button>; })}</div></>}
+
+      {tab === "payments" && <><div className={styles.paymentFilters}>{[["ATTENTION","Needs attention"],["PARTIAL","Partially paid"],["CONFIRMED","Recently confirmed"],["ALL","All bookings"]].map(([value,label]) => <button key={value} className={paymentFilter === value ? styles.paymentFilterActive : ""} onClick={() => setPaymentFilter(value as typeof paymentFilter)}>{label}</button>)}</div><div className={styles.paymentList}>{loading ? <div className={styles.empty}>Loading booking summaries…</div> : visiblePaymentBookings.length === 0 ? <div className={styles.empty}>No bookings in this view.</div> : visiblePaymentBookings.map((booking) => { const state = paymentState(booking); return <article key={`${booking.type}-${booking.id}`} className={styles.paymentCard}><div><span className={styles.paymentState} data-state={state}>{state.replace("_", " ")}</span><h3>{booking.customerName}</h3><p>{booking.tripTitle} · {booking.departureDate ? new Date(booking.departureDate).toLocaleDateString("en-IN") : "Date not set"}</p><small>{booking.id} · {booking.travelers} traveller{booking.travelers === 1 ? "" : "s"}</small></div><div className={styles.paymentAmounts}><span>Total <strong>₹{booking.totalAmount.toLocaleString("en-IN")}</strong></span><span>Paid <strong>₹{booking.amountPaid.toLocaleString("en-IN")}</strong></span><span>Balance <strong>₹{booking.balanceAmount.toLocaleString("en-IN")}</strong></span></div><div className={styles.paymentActions}>{booking.phone && <><a href={`tel:${booking.phone}`}>Call</a><a href={`https://wa.me/${booking.phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></>}</div></article>; })}</div></>}
 
       {tab === "import" && <div className={styles.importPanel}><div className={styles.uploadIcon}>⇧</div><p>Bring your leads together</p><h2>Upload an Excel or CSV sheet</h2><span>Up to 2,000 leads per file. Existing customers are matched using mobile or email.</span><form onSubmit={importFile}><input type="file" name="file" accept=".xlsx,.csv" required /><button className={styles.primary}>Import leads</button></form><a href="/templates/bucketlist-lead-import-template.xlsx" download>Download the ready-to-use template ↓</a><div className={styles.columnGuide}><strong>Recognised columns</strong><p>Customer Name · Mobile · Email · Interested Trip · Travel Month · Lead Source · Status · Next Follow-up · Assigned To · Notes</p></div></div>}
     </section>
