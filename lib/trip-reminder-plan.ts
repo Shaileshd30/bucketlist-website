@@ -3,6 +3,7 @@ import {dateOffset, indiaDate, reviewMessage, whatsappUrl} from './trip-reminder
 export type ReminderSettings={id:string;customer_enabled:boolean;vendor_enabled:boolean;review_enabled:boolean;details:string;checklist:string;tips:string};
 export type ReminderJob={id:string;trip:string;recipient:string;subject:string;message:string;date:string;kind:string;whatsapp:string|null};
 export type ReminderTrip={id:string;title:string;start:string;end:string;setting:ReminderSettings};
+export type ManualReminder={id:string;sourceId:string;customer:string;reference:string;phone:string;message:string;whatsapp:string|null;reason:string};
 type Row=Record<string,unknown>;
 const str=(x:unknown)=>x==null?'':String(x);
 export async function reminderRows(table:string, select:string):Promise<Row[]> {
@@ -16,6 +17,7 @@ export async function reminderRows(table:string, select:string):Promise<Row[]> {
 }
 export async function reminderPlan(now=new Date()) {
  const today=indiaDate(now),warnings:string[]=[],jobs:ReminderJob[]=[],sources:ReminderTrip[]=[];
+ const manualPreviews:ManualReminder[]=[],manualReasons:Record<string,string>={};
  const [settings,batches,trips,bookings,custom]=await Promise.all([
   reminderRows('trip_reminder_settings','id,customer_enabled,vendor_enabled,review_enabled,details,checklist,tips'),
   reminderRows('trip_batches','id,trip_id,departure_date,return_date,status'),
@@ -36,11 +38,25 @@ export async function reminderPlan(now=new Date()) {
  }
  function build(kind:string,row:Row,title:string,start:string,end:string,customers:Row[],checklist:string){
   if(!start||!end||['CANCELLED','DRAFT','MANUAL_REVIEW'].includes(str(row.status||row.booking_status)))return;
-  if(end<dateOffset(today,-2)||start>dateOffset(today,60))return;
+  if(end<dateOffset(today,-2))return;
   const id=kind+':'+str(row.id),saved=settings.find(s=>s.id===id);
   const setting:ReminderSettings={id,customer_enabled:false,vendor_enabled:false,review_enabled:false,details:'',checklist,tips:'',...saved};
   const source={id,title,start,end,setting};sources.push(source);
   const valid=customers.filter(c=>['CONFIRMED','COMPLETED'].includes(str(c.booking_status))&&!['REFUNDED','PARTIALLY_REFUNDED','FAILED'].includes(str(c.payment_status)));
+  const manualCustomers=valid.filter(c=>c.booking_status==='CONFIRMED');
+  if(start<today||row.status==='COMPLETED')manualReasons[id]='Preparation messages are available before departure. This trip has already started or is completed.';
+  else if(!manualCustomers.length)manualReasons[id]='No eligible confirmed bookings. Awaiting-advance, cancelled, completed, failed-payment and refunded bookings do not receive preparation messages.';
+  else for(const c of manualCustomers){
+   const name=str(c.customer_name),phone=str(c.phone);
+   const message=`Dear ${name},\n\nWe look forward to welcoming you on ${title}, beginning ${start}. Here are the details to help you prepare.\n\nMeeting and coordinator details\n${setting.details}\n\nThings to carry\n${setting.checklist}\n\n${setting.tips?'Travel tips\n'+setting.tips+'\n\n':''}If you have any questions, please reply and we will be happy to help.\n\nWarm regards,\nTeam Bucketlist Adventure\nWe Plan It. You Live It.`;
+   const link=whatsappUrl(phone,message);
+   const placeholder=(value:string)=>!value.trim()||/^(n\/?a|none|nil|tbd|-)$/i.test(value.trim());
+   const reasons:string[]=[];
+   if(placeholder(setting.details))reasons.push('Add and save meeting details and coordinator contact.');
+   if(placeholder(setting.checklist))reasons.push('Add and save a real things-to-carry checklist; NA is not a checklist.');
+   if(!link)reasons.push('Add a valid customer phone number in the booking.');
+   manualPreviews.push({id:JSON.stringify([id,c.id,'MANUAL_PREPARATION']),sourceId:id,customer:name,reference:str(c.booking_reference||c.booking_id||c.id),phone,message,whatsapp:reasons.length?null:link,reason:reasons.join(' ')});
+  }
   if(setting.customer_enabled&&(!setting.details.trim()||!setting.checklist.trim()))warnings.push(`${title}: meeting details and things to carry are required before customer reminders can send.`);
   for(const c of valid){
    const name=str(c.customer_name),email=str(c.email).trim(),phone=str(c.phone);
@@ -65,5 +81,5 @@ export async function reminderPlan(now=new Date()) {
  for(const b of custom)build('CUSTOM',b,str(b.package_name),str(b.travel_start_date),str(b.travel_end_date||b.travel_start_date),[b],'');
  const upcoming=sources.filter(s=>s.start>=today&&s.start<=dateOffset(today,7));
  if(upcoming.length){const recipient=process.env.TRIP_REMINDER_ADMIN_EMAIL||'info@bucketlistadventure.in';jobs.push({id:JSON.stringify(['ADMIN',today,recipient]),trip:'Upcoming trips',recipient,subject:'Your upcoming Bucketlist trips',date:today,kind:'ADMIN',whatsapp:null,message:`Good morning,\n\nTrips starting within the next seven days:\n\n${upcoming.map(s=>`${s.start} — ${s.title}`).join('\n')}\n\nPlease check traveller details, pending balances, vendor arrangements and trip checklists in the CRM.\n\nhttps://bucketlistadventure.in/admin/crm\n\nTeam Bucketlist Adventure`});}
- return {today,sources:sources.sort((a,b)=>a.start.localeCompare(b.start)),jobs:jobs.sort((a,b)=>a.date.localeCompare(b.date)),warnings};
+ return {today,sources:sources.sort((a,b)=>a.start.localeCompare(b.start)),jobs:jobs.sort((a,b)=>a.date.localeCompare(b.date)),warnings,manualPreviews,manualReasons};
 }
