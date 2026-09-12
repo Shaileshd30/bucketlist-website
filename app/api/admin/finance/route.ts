@@ -1,0 +1,37 @@
+import {requireAdmin} from '@/lib/admin-auth';
+import {isSameOriginRequest} from '@/lib/request-origin';
+import {supabaseAdmin} from '@/lib/supabase-server';
+import {currencies,categories,type FinanceRow} from '@/lib/finance-model';
+export const dynamic='force-dynamic';
+const headers={'Cache-Control':'no-store, private'};
+async function read(table:string,fields='*'):Promise<FinanceRow[]>{
+ const all:FinanceRow[]=[];
+ for(let start=0;start<50000;start+=500){const r=await supabaseAdmin.from(table).select(fields).order('id').range(start,start+499);if(r.error)throw r.error;const page=r.data as unknown as FinanceRow[];all.push(...page);if(page.length<500)return all;}
+ throw Error('Result exceeds finance limit');
+}
+async function sources(){
+ const [trips,batches,bookings,custom]=await Promise.all([read('trips','id,title'),read('trip_batches','id,trip_id,departure_date'),read('bookings','id,batch_id,total_amount,booking_status,payment_status'),read('custom_bookings','id,package_name,travel_start_date,total_amount,booking_status,payment_status')]);
+ const accepted=(b:FinanceRow)=>['CONFIRMED','COMPLETED'].includes(String(b.booking_status))&&!['REFUNDED','PARTIALLY_REFUNDED'].includes(String(b.payment_status));
+ const review=(b:FinanceRow)=>b.booking_status==='MANUAL_REVIEW'||['REFUNDED','PARTIALLY_REFUNDED'].includes(String(b.payment_status));
+ return [...batches.map(b=>{const linked=bookings.filter(k=>k.batch_id===b.id);return {id:b.id,account_type:'DEPARTURE',trip_name:trips.find(t=>t.id===b.trip_id)?.title||b.trip_id,departure_date:b.departure_date,revenue:linked.filter(accepted).reduce((s,k)=>s+Number(k.total_amount),0),review:linked.some(review)};}),...custom.map(b=>({id:b.id,account_type:'CUSTOM',trip_name:b.package_name,departure_date:b.travel_start_date,revenue:accepted(b)?Number(b.total_amount):0,review:review(b)}))];
+}
+export async function GET(){const denied=await requireAdmin();if(denied)return denied;try{
+ const [vendors,accounts,contracts,payments,expenses,sourceRows,audit]=await Promise.all([read('crm_vendors'),read('crm_trip_accounts'),read('crm_vendor_contracts'),read('crm_vendor_payments'),read('crm_trip_expenses'),sources(),supabaseAdmin.from('crm_finance_audit').select('id,entity,record_id,action,created_at').order('id',{ascending:false}).limit(100)]);
+ if(audit.error)throw audit.error;return Response.json({vendors,accounts,contracts,payments,expenses,sources:sourceRows,audit:audit.data},{headers});
+ }catch(e){console.error('Finance GET failed',e);return Response.json({error:'Unable to load finance. Check that the complete migration has run.'},{status:500,headers});}}
+function text(v:unknown,max=500,required=true){if(!required&&(v==null||v===''))return null;if(typeof v!=='string'||!v.trim()||v.length>max)throw Error('Check required text fields.');return v.trim();}
+function uuid(v:unknown){const s=text(v,36)!;if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s))throw Error('Choose a valid linked record.');return s;}
+function number(v:unknown,decimals=2){if(!new RegExp(`^\\d{1,9}(\\.\\d{1,${decimals}})?$`).test(String(v))||Number(v)<=0)throw Error('Enter a positive amount or exchange rate.');return Number(v);}
+function date(v:unknown,required=true){const s=text(v,10,required);if(s&&(!/^\d{4}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||new Date(s).toISOString().slice(0,10)!==s))throw Error('Enter a valid date.');return s;}
+export async function POST(request:Request){const denied=await requireAdmin();if(denied)return denied;if(!isSameOriginRequest(request))return Response.json({error:'Invalid request origin.'},{status:403,headers});
+ try{const {kind,data:d}=await request.json();if(!d||typeof d!=='object')throw Error('Invalid request.');let table='',row:Record<string,unknown>={};
+ if(kind==='account'){const source=(await sources()).find(s=>s.id===d.reference_id&&s.account_type===d.account_type);if(!source)throw Error('Choose an existing departure or custom booking.');table='crm_trip_accounts';row={account_type:source.account_type,reference_id:source.id,trip_name:source.trip_name,departure_date:source.departure_date};}
+ else if(kind==='vendor'){table='crm_vendors';const type=text(d.vendor_type,20);if(!['DMC','HOTEL','TRANSPORT','GUIDE','ACTIVITY','OTHER'].includes(type!))throw Error('Invalid vendor type.');const email=text(d.email,254,false);if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid email.');const name=text(d.name,180)!;if(name.length<2)throw Error('Company name needs at least two characters.');row={name,vendor_type:type,contact_person:text(d.contact_person,150,false),phone:text(d.phone,32,false),email,destination:text(d.destination,200,false)};}
+ else if(kind==='contract'||kind==='expense'){const currency=text(d.currency,3)!;if(!currencies.includes(currency))throw Error('Invalid currency.');const fx=number(kind==='contract'?d.planning_fx_rate:d.fx_rate,6);if(currency==='INR'&&fx!==1)throw Error('INR exchange rate must be 1.');row={account_id:uuid(d.account_id),description:text(d.description),currency};
+ if(kind==='contract'){table='crm_vendor_contracts';Object.assign(row,{vendor_id:uuid(d.vendor_id),contract_amount:number(d.contract_amount),planning_fx_rate:fx,due_date:date(d.due_date,false)});}else{if(!categories.includes(d.category))throw Error('Invalid expense category.');table='crm_trip_expenses';Object.assign(row,{category:d.category,amount:number(d.amount),fx_rate:fx,expense_date:date(d.expense_date),request_key:uuid(d.request_key)});}}
+ else if(kind==='payment'){row={contract_id:uuid(d.contract_id),amount:number(d.amount),fx_rate:number(d.fx_rate,6),payment_date:date(d.payment_date),payment_method:text(d.payment_method,100,false),reference:text(d.reference,200,false),notes:text(d.notes,2000,false),request_key:uuid(d.request_key)};const r=await supabaseAdmin.rpc('crm_record_vendor_payment',{p_data:row});if(r.error){console.error('Vendor payment failed',r.error);throw Error(r.error.message.includes('exceeds')?'Payment exceeds the remaining balance.':'Could not record payment. Check amounts and migration.');}return Response.json({id:r.data},{headers});}
+ else if(kind==='void_payment'||kind==='void_expense'){table=kind==='void_payment'?'crm_vendor_payments':'crm_trip_expenses';const r=await supabaseAdmin.from(table).update({void_reason:text(d.reason)}).eq('id',uuid(d.id)).is('void_reason',null).select('id').single();if(r.error)throw Error('Unable to void entry. It may already be voided.');return Response.json({id:r.data.id},{headers});}
+ else throw Error('Invalid action.');
+ const query=kind==='vendor'&&d.id?supabaseAdmin.from(table).update({...row,active:d.active===true,updated_at:new Date().toISOString()}).eq('id',uuid(d.id)):supabaseAdmin.from(table).insert(row);
+ const r=await query.select('id').single();if(r.error){console.error('Finance write failed',r.error);if(r.error.code==='23505'&&(kind==='expense'||kind==='account')){const found=kind==='expense'?await supabaseAdmin.from(table).select('id').eq('request_key',String(row.request_key)).single():await supabaseAdmin.from(table).select('id').eq('account_type',String(row.account_type)).eq('reference_id',String(row.reference_id)).single();if(found.data)return Response.json(found.data,{headers});}throw Error('Could not save. Check linked records and migration.');}return Response.json(r.data,{headers});
+ }catch(e){return Response.json({error:e instanceof Error?e.message:'Invalid finance request.'},{status:400,headers});}}
