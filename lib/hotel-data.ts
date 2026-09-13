@@ -7,8 +7,25 @@ export function validateHotel(v:unknown):Hotel {
  if(!v||typeof v!=='object')throw Error('Invalid hotel.');const r=v as Record<string,unknown>,h={...emptyHotel};
  for(const k of ['id','name','destination','category','roomType','mealPlan','mapsUrl'] as const){if(typeof r[k]!=='string'||r[k].length>(k==='mapsUrl'?2000:180))throw Error('Check hotel '+k);h[k]=r[k].trim();}
  if(h.name.length<2||!h.destination)throw Error('Hotel name and destination are required.');
- if(h.mapsUrl&&!mapsLink(h.mapsUrl))throw Error('Use a Google Maps HTTPS link.');
- if(!Array.isArray(r.photos)||r.photos.length>3||r.photos.some(p=>typeof p!=='string'||p.length>350000||!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(p)))throw Error('Use up to three small JPG/PNG photos.');
+function isValidGoogleMapsUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+
+    if (url.protocol !== "https:") return false;
+
+    const allowedHosts = [
+      "www.google.com",
+      "google.com",
+      "maps.google.com",
+      "maps.app.goo.gl",
+      "share.google",
+    ];
+
+    return allowedHosts.includes(url.hostname);
+  } catch {
+    return false;
+  }
+} if(!Array.isArray(r.photos)||r.photos.length>3||r.photos.some(p=>typeof p!=='string'||p.length>350000||!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(p)))throw Error('Use up to three small JPG/PNG photos.');
  h.photos=r.photos as string[];h.active=r.active!==false;return h;
 }
 export function validateOptions(v:unknown):PackageOption[]{
