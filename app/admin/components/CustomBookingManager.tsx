@@ -1,4 +1,5 @@
 "use client";
+import QuotationShare from '../quotations/QuotationShare';
 
 import {
   useCallback,
@@ -1039,7 +1040,7 @@ export default function CustomBookingManager() {
                   <div className="mt-5">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                       <h4 className="font-semibold text-[#17251d]">Installments</h4>
-                      <a href={`/admin/quotations?booking=${booking.id}`} className="rounded-full bg-[#17251d] px-4 py-2 text-xs font-semibold text-white">Prepare quotation</a>
+                      <a href={`/admin/quotations?booking=${booking.id}`} className="rounded-full bg-[#17251d] px-4 py-2 text-xs font-semibold text-white">Create / Edit quotation</a>
                       <a
                         href={`/api/custom-bookings/${booking.id}/voucher`}
                         className="rounded-full border border-[#17251d]/15 px-4 py-2 text-xs font-semibold text-[#17251d] transition hover:bg-[#17251d] hover:text-white"
@@ -1048,6 +1049,7 @@ export default function CustomBookingManager() {
                       </a>
                     </div>
 
+                    <QuotationShare bookingId={booking.id} customer={booking.customerName} phone={booking.phone} title={booking.packageName} reference={booking.bookingReference}/>
                     <div className="grid gap-3 lg:grid-cols-2">
                       {booking.installments.map((installment) => (
                         <div

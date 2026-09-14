@@ -2,30 +2,46 @@ export type Hotel={id:string;name:string;destination:string;category:string;room
 export type Stay=Hotel & {nights:number;alternative:boolean};
 export type PackageOption={id:string;name:string;total:number;included:boolean;notes:string;rooms:number;extraMattresses:number;extraMeals:number;cabType:string;cabCount:number;luggageCabs:number;stays:Stay[]};
 export const emptyHotel:Hotel={id:'',name:'',destination:'',category:'',roomType:'',mealPlan:'',mapsUrl:'',photos:[],active:true};
-export function mapsLink(s:string){if(!s)return '';try{const u=new URL(s);if(u.protocol!=='https:'||u.username||u.password)return '';return (['maps.app.goo.gl','maps.google.com'].includes(u.hostname)||(['www.google.com','google.com','www.google.co.in','google.co.in','goo.gl'].includes(u.hostname)&&u.pathname.startsWith('/maps')))?u.href:'';}catch{return '';}}
+export function mapsLink(s: string): string {
+  if (!s) return "";
+
+  try {
+    const u = new URL(s.trim());
+
+    if (u.protocol !== "https:" || u.username || u.password) {
+      return "";
+    }
+
+    const shortLinkHosts = [
+      "maps.app.goo.gl",
+      "maps.google.com",
+      "share.google",
+    ];
+
+    const mapsPageHosts = [
+      "www.google.com",
+      "google.com",
+      "www.google.co.in",
+      "google.co.in",
+      "goo.gl",
+    ];
+
+    const valid =
+      shortLinkHosts.includes(u.hostname) ||
+      (mapsPageHosts.includes(u.hostname) &&
+        /^\/maps(?:\/|$)/.test(u.pathname));
+
+    return valid ? u.href : "";
+  } catch {
+    return "";
+  }
+}
 export function validateHotel(v:unknown):Hotel {
  if(!v||typeof v!=='object')throw Error('Invalid hotel.');const r=v as Record<string,unknown>,h={...emptyHotel};
  for(const k of ['id','name','destination','category','roomType','mealPlan','mapsUrl'] as const){if(typeof r[k]!=='string'||r[k].length>(k==='mapsUrl'?2000:180))throw Error('Check hotel '+k);h[k]=r[k].trim();}
  if(h.name.length<2||!h.destination)throw Error('Hotel name and destination are required.');
-function isValidGoogleMapsUrl(value: string) {
-  try {
-    const url = new URL(value.trim());
-
-    if (url.protocol !== "https:") return false;
-
-    const allowedHosts = [
-      "www.google.com",
-      "google.com",
-      "maps.google.com",
-      "maps.app.goo.gl",
-      "share.google",
-    ];
-
-    return allowedHosts.includes(url.hostname);
-  } catch {
-    return false;
-  }
-} if(!Array.isArray(r.photos)||r.photos.length>3||r.photos.some(p=>typeof p!=='string'||p.length>350000||!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(p)))throw Error('Use up to three small JPG/PNG photos.');
+ if(h.mapsUrl){const url=mapsLink(h.mapsUrl);if(!url)throw Error('Use a Google Maps HTTPS link.');h.mapsUrl=url;}
+ if(!Array.isArray(r.photos)||r.photos.length>3||r.photos.some(p=>typeof p!=='string'||p.length>350000||!/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(p)))throw Error('Use up to three small JPG/PNG photos.');
  h.photos=r.photos as string[];h.active=r.active!==false;return h;
 }
 export function validateOptions(v:unknown):PackageOption[]{

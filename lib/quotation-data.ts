@@ -1,7 +1,7 @@
 import {validateOptions,type PackageOption} from './hotel-data';
 export type QuotationContent={intro:string;route:string;hotels:string;itinerary:string;includes:string;excludes:string;terms:string;pricingNote:string;validUntil:string;cover:string;options:PackageOption[];selectedOptionId:string};
 export const emptyQuotation:QuotationContent={intro:'A journey thoughtfully planned around you. We look forward to helping you create wonderful memories.',route:'',hotels:'',itinerary:'',includes:'',excludes:'',terms:'Subject to availability at the time of confirmation. Please review the itinerary, inclusions and payment schedule before booking.',pricingNote:'',validUntil:'',cover:'',options:[],selectedOptionId:''};
-export type QuoteBooking={reference:string;title:string;customer:string;travellers:number;start:string;end:string;total:number;paid:number;balance:number};
+export type QuoteBooking={reference:string;title:string;customer:string;phone?:string;travellers:number;start:string;end:string;total:number;paid:number;balance:number};
 export type QuoteInstallment={id:string;label:string;amount:number;paid:number;due:string;status:string;url:string;expires:string};
 export function validPayLink(value:string){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&['rzp.io','rzp.in','razorpay.com','www.razorpay.com','pages.razorpay.com','pay.razorpay.com'].includes(u.hostname)?u.href:'';}catch{return '';}}
 export function availablePayment(rows:QuoteInstallment[],bookingStatus:string,validUntil:string,now=Date.now()){
@@ -19,5 +19,20 @@ export function validateQuotation(input:unknown):QuotationContent{
  result.options=validateOptions(d.options);result.selectedOptionId=typeof d.selectedOptionId==='string'?d.selectedOptionId:'';
  if(result.selectedOptionId&&!result.options.some(o=>o.id===result.selectedOptionId))throw Error('Choose an existing package option.');
  if(result.options.length&&!result.options.some(o=>o.included))throw Error('Include at least one package in the PDF.');
+ return result;
+}
+
+export function editableQuotation(input:unknown):QuotationContent {
+ const source=input&&typeof input==='object'&&!Array.isArray(input)?input as Record<string,unknown>:{};
+ const result:QuotationContent={...emptyQuotation,options:[]};
+ for(const key of Object.keys(emptyQuotation) as (keyof QuotationContent)[]){
+  if(key==='options')continue;
+  if(typeof source[key]==='string')result[key]=source[key] as string;
+ }
+ if(Array.isArray(source.options))result.options=source.options.filter(o=>o&&typeof o==='object').map((o,index)=>({
+  name:'Package option',total:0,included:true,notes:'',rooms:0,extraMattresses:0,extraMeals:0,cabType:'',cabCount:0,luggageCabs:0,...o,
+  id:typeof o.id==='string'?o.id:'legacy-'+index,
+  stays:Array.isArray(o.stays)?o.stays.filter((h:unknown)=>h&&typeof h==='object').map((h:Record<string,unknown>)=>({id:'',name:'',destination:'',category:'',roomType:'',mealPlan:'',mapsUrl:'',active:true,nights:1,alternative:false,...h,photos:Array.isArray(h.photos)?h.photos:[]})):[]
+ }));
  return result;
 }
