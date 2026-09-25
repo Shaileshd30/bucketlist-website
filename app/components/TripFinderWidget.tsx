@@ -20,7 +20,7 @@ export default function TripFinderWidget() {
   const button = useRef<HTMLButtonElement>(null);
   const close = useRef<HTMLButtonElement>(null);
   const controller = useRef<AbortController | null>(null);
-  const hidden = /^\/(admin|api|book)(\/|$)/.test(pathname) || /^\/(payment|payments)(\/|$)/.test(pathname);
+  const hidden = /^\/(admin|api|book|proposal)(\/|$)/.test(pathname) || /^\/(payment|payments)(\/|$)/.test(pathname);
   useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => { if (open) close.current?.focus(); }, [open]);
   function dismiss() { setOpen(false); button.current?.focus(); }

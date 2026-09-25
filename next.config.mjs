@@ -67,6 +67,8 @@ const nextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      { source: "/proposal/:path*", headers: [{key:"Referrer-Policy",value:"no-referrer"},{key:"X-Robots-Tag",value:"noindex, nofollow, noarchive"},{key:"Cache-Control",value:"no-store, private"}] },
+      { source: "/api/proposals/:path*", headers: [{key:"Referrer-Policy",value:"no-referrer"},{key:"X-Robots-Tag",value:"noindex, nofollow, noarchive"},{key:"Cache-Control",value:"no-store, private"}] },
     ];
   },
 };

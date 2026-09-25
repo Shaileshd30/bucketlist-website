@@ -1,12 +1,10 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
 
 type Props={bookingId:string;customer:string;phone?:string;title:string;reference?:string;disabled?:boolean};
-export default function QuotationShare({bookingId,customer,phone='',title,reference='quotation',disabled=false}:Props){
+function QuotationShareSession({bookingId,customer,phone='',title,reference='quotation',disabled=false}:Props){
  const [file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const [recipient,setRecipient]=useState(phone);
- useEffect(()=>{setRecipient(phone);},[phone]);
- useEffect(()=>{setFile(null);setNotice('');},[bookingId,disabled]);
  const message='Hello '+customer+',\n\nPlease find your personalised quotation for '+title+'. Please review the itinerary, accommodation and payment terms.\n\nBucketlist Adventure\nWe Plan It. You Live It.';
  let digits=recipient.replace(/[^0-9]/g,'');
  if(digits.startsWith('00'))digits=digits.slice(2);
@@ -55,4 +53,9 @@ export default function QuotationShare({bookingId,customer,phone='',title,refere
   </>}
   {notice&&<p role="status">{notice}</p>}
  </div>;
+}
+
+// A new booking or edit/save transition invalidates the prepared PDF and any pending request.
+export default function QuotationShare(props: Props) {
+ return <QuotationShareSession key={JSON.stringify([props.bookingId, props.phone || '', Boolean(props.disabled)])} {...props}/>;
 }

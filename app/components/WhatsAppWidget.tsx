@@ -40,6 +40,8 @@ export default function WhatsAppWidget() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
+  if (pathname.startsWith("/proposal/")) return null;
+
   const message = buildMessage(pathname);
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
